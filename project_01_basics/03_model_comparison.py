@@ -245,9 +245,11 @@ def print_speed_ranking(all_results):
 
     # 打印统计信息
     print(f"\n  平均响应时间: {average_time} 秒")
-    # 打印最快和最慢的模型
-    print(f"  最快: {successful_results[0]['provider'].upper()} ({successful_results[0]['time']} 秒)")
-    print(f"  最慢: {successful_results[-1]['provider'].upper()} ({successful_results[-1]['time']} 秒)")
+    # 提取最快和最慢的模型结果对象
+    fastest = successful_results[0]
+    slowest = successful_results[-1]
+    print(f"  最快: {fastest['provider'].upper()} ({fastest['time']} 秒)")
+    print(f"  最慢: {slowest['provider'].upper()} ({slowest['time']} 秒)")
 
 
 def run_comparison():

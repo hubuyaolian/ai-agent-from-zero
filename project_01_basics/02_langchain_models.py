@@ -236,7 +236,7 @@ def demo_invoke_result():
     print(f"content（回答文本）: {result.content}")  # 最常用的属性
 
     # response_metadata 包含了完整的 API 响应元数据
-    print(f"\nresponse_metadata（响应元数据）:")
+    print("\nresponse_metadata（响应元数据）:")
     # 安全地访问可能存在的元数据字段
     if hasattr(result, "response_metadata"):
         # 遍历元数据字典，打印每个字段
@@ -244,7 +244,7 @@ def demo_invoke_result():
             print(f"  {key}: {value}")
 
     # usage_metadata 包含了 Token 使用量信息
-    print(f"\nusage_metadata（Token 使用量）:")
+    print("\nusage_metadata（Token 使用量）:")
     if hasattr(result, "usage_metadata"):
         # 检查 usage_metadata 是否为 None
         if result.usage_metadata is not None:

@@ -210,7 +210,7 @@ def demo_03_runnable_passthrough(model):
         {"text": "LangChain 是一个强大的框架"}
     )
     # 结果中既有原始的 text，也有新增的 text_length
-    print(f"输入: {{'text': 'LangChain 是一个强大的框架'}}")
+    print("输入: {'text': 'LangChain 是一个强大的框架'}")
     print(f"输出: {result}")
 
     # ---- 在链中使用 Passthrough ----
@@ -353,7 +353,7 @@ def demo_04_runnable_lambda(model):
 
     # 调用链
     result = full_chain.invoke("  量子纠缠  ")
-    print(f"输入: '  量子纠缠  '")
+    print("输入: '  量子纠缠  '")
     print(f"输出: {result}")
 
 

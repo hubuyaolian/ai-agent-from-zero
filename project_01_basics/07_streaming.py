@@ -400,7 +400,7 @@ def demo_06_stream_print_usage(model):
     print("\n--- 用法 1：model.stream() ---")
     print("🤖 ", end="")
     # 调用 stream_print 并获取完整文本
-    text_1 = stream_print(
+    stream_print(
         model.stream("用一句话解释什么是闭包（closure）")
     )
 
@@ -418,7 +418,7 @@ def demo_06_stream_print_usage(model):
 
     print("🤖 ", end="")
     # 对链使用 stream_print
-    text_2 = stream_print(
+    stream_print(
         chain.stream({"concept": "回调函数"})
     )
 
