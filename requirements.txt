@@ -1,0 +1,29 @@
+# ============================================================
+# AI Agent 学习项目 - Python 依赖清单
+# ============================================================
+# 安装方法：pip install -r requirements.txt
+# 推荐使用虚拟环境：python -m venv .venv && source .venv/bin/activate
+# ============================================================
+
+# ----- LangChain 核心框架 -----
+langchain>=0.3.0
+langchain-core>=0.3.0
+
+# ----- 模型接口 -----
+langchain-openai>=0.2.0             # OpenAI 兼容接口（国产模型通用）
+langchain-google-genai>=2.0.0       # Google Gemini 专用接口
+
+# ----- LangGraph（高级 Agent 编排） -----
+langgraph>=0.2.0
+
+# ----- 环境变量管理 -----
+python-dotenv>=1.0.0
+
+# ----- 向量数据库（阶段4 RAG 使用） -----
+chromadb>=0.5.0
+
+# ----- 数据校验 -----
+pydantic>=2.0.0
+
+# ----- HTTP 请求（阶段1 原始 API 调用使用） -----
+requests>=2.31.0
