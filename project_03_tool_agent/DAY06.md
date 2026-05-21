@@ -35,14 +35,14 @@
 ```
 project_03_tool_agent/
 ├── tools/
-│   ├── __init__.py            # 统一导出所有工具
-│   ├── calculator.py          # 数学计算工具
-│   ├── web_search.py          # 网络搜索工具（模拟）
-│   ├── file_ops.py            # 文件读写工具
-│   ├── system_info.py         # 系统信息工具
-│   └── code_executor.py       # Python 代码执行工具（沙箱）
-├── 04_agent_loop.py           # 完整的 Agent 循环
-└── 05_error_handling.py       # 错误处理与重试
+│   ├── __init__.py            # 统一导出所有工具 [Day 6 新增]
+│   ├── calculator.py          # 数学计算工具     [Day 5 已创建]
+│   ├── web_search.py          # 网络搜索工具     [Day 6 新增]
+│   ├── file_ops.py            # 文件读写工具     [Day 6 新增]
+│   ├── system_info.py         # 系统信息工具     [Day 6 新增]
+│   └── code_executor.py       # Python沙箱执行   [Day 6 新增]
+├── 04_agent_loop.py           # 完整的 Agent 循环  [Day 6 新增]
+└── 05_error_handling.py       # 错误处理与重试     [Day 6 新增]
 ```
 
 在 `tools/__init__.py` 中统一导出，方便主程序一行导入所有工具：
@@ -68,7 +68,7 @@ ALL_TOOLS = [
 #### 📐 计算器工具 (`calculator.py`)
 - **功能**：接收一个数学表达式字符串，返回精确计算结果。
 - **为什么需要**：大模型做数学运算经常出错（例如会算错多位数乘法），把精确计算委托给 Python 可以确保 100% 正确。
-- **安全考量**：使用 Python 内置的 `ast.literal_eval` 或受限的 `eval` 执行表达式，避免恶意代码注入。
+- **安全考量**：使用 Python 内置的 `ast.parse` 将表达式解析为抽象语法树（AST），再通过白名单运算符递归求值。这种方式**只允许数学运算**（加减乘除、幂运算），从根本上杜绝了代码注入风险，比 `eval()` 安全得多。
 
 #### 🔍 网络搜索工具 (`web_search.py`)
 - **功能**：模拟搜索引擎，根据关键词返回相关信息。

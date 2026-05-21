@@ -287,6 +287,78 @@ Retriever 家族
 2. **来源引用**：要求模型在回答中标注引用来源（如"根据资料[1]..."），便于用户验证。
 3. **置信度过滤**：当检索结果的相似度分数低于阈值时，直接告知用户"未找到相关信息"，而不是强行生成。
 
+### 4. 跨阶段整合：将 RAG 工具集成到 Day 7 的 LangGraph Agent 中
+
+在 Day 10 中，我们学会了用 `@tool` 将 RAG 知识库检索定义为一个工具。很多学员在学完这里后，会面临如何将它与 Day 7 的“多工具 LangGraph Agent”进行整合的疑问。
+
+实际上，因为我们遵循了**统一的 `@tool` 规范**，整合工作极其简单！只需要两步：
+1. 从 `tools/` 目录下（或者你单独定义 RAG 工具的文件中）导入它。
+2. 把它作为普通的工具，放入到工具列表中，绑定到大模型，并提供给 LangGraph 的工具节点。
+
+以下是完整的整合概念代码示例：
+
+```python
+# 示例代码：多工具 LangGraph Agent + RAG 知识库工具
+from typing import TypedDict, Annotated, Sequence
+import operator
+from langchain_core.messages import BaseMessage
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
+
+# 1. 导入已有的基础工具和新增的 RAG 知识库工具
+from project_03_tool_agent.tools import ALL_TOOLS  # calculator, web_search 等
+from project_04_memory_rag.DAY10 import search_knowledge_base  # RAG 检索工具
+
+# 2. 组装最终的工具列表
+MY_AGENT_TOOLS = ALL_TOOLS + [search_knowledge_base]
+
+# 3. 创建绑定了全部工具的 LLM
+model = ChatOpenAI(model="qwen-plus").bind_tools(MY_AGENT_TOOLS)
+
+# 4. 定义 LangGraph 状态
+class AgentState(TypedDict):
+    messages: Annotated[Sequence[BaseMessage], operator.add]
+
+# 5. 定义节点逻辑
+def call_model(state: AgentState):
+    """大模型节点逻辑。"""
+    response = model.invoke(state["messages"])
+    return {"messages": [response]}
+
+# 6. 构建状态图
+workflow = StateGraph(AgentState)
+
+# 添加大模型节点和工具节点
+workflow.add_node("agent", call_model)
+workflow.add_node("action", ToolNode(MY_AGENT_TOOLS))  # 自动执行 RAG 或其他基础工具
+
+# 设置节点边关系
+workflow.set_entry_point("agent")
+
+def should_continue(state: AgentState):
+    """条件路由：根据大模型是否输出 tool_calls 决定去往何处。"""
+    last_message = state["messages"][-1]
+    if last_message.tool_calls:
+        return "action"
+    return END
+
+workflow.add_conditional_edges(
+    "agent",
+    should_continue,
+    {
+        "action": "action",
+        "end": END
+    }
+)
+workflow.add_edge("action", "agent")
+
+app = workflow.compile()
+```
+
+> 💡 **架构的优雅之处**：
+> 通过 `@tool` 这一层标准抽象，**你的 RAG 知识库与计算器、网络搜索工具在地位上是完全平等的**。大模型会根据用户提问，自动选择是调用 `calculator` 计算，还是调用 `search_knowledge_base` 搜索私有文档，真正实现“混合能力编排”！
+
 ---
 
 ## 课后练习

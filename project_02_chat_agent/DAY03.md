@@ -10,7 +10,8 @@
 3. [第二部分：最简无状态对话循环 (Simple Chatbot)](#第二部分最简无状态对话循环-simple-chatbot)
 4. [第三部分：短期记忆的工程实现 (Chat History)](#第三部分短期记忆的工程实现-chat-history)
 5. [第四部分：System Prompt 塑造 Agent 人格 (Persona)](#第四部分system-prompt-塑造-agent-人格-persona)
-6. [课后练习](#课后练习)
+6. [第五部分：LCEL 与对话 Agent 的关系](#第五部分lcel-与对话-agent-的关系)
+7. [课后练习](#课后练习)
 
 ---
 
@@ -18,6 +19,7 @@
 - 深刻理解 Agent 的核心工作循环：`感知 -> 思考 -> 行动 -> 状态更新`。
 - 掌握在命令行下构建交互式对话循环（`while True`）的工程技巧。
 - 理解大模型“有记忆回答”在底层的代码实现机制，手写管理短期消息上下文。
+- 明确 LCEL 与对话交互循环的定位差异，理解在多轮状态交互下如何选用合适的开发模式。
 - 学会通过精心设计的 `SystemMessage` 赋予 Agent 特定的专业人格与行为边界。
 - 掌握在多轮对话中动态切换 Agent 角色并进行上下文清理的开发流程。
 
@@ -113,6 +115,41 @@
 > 否则，前一个角色的对话记录（比如心理咨询师的安慰话语）会混入新角色（比如严厉的编程导师）的上下文里，导致大模型产生“角色精神分裂”和行为失常。
 
 > 📖 **代码实战**：查看并运行 [03_chat_with_persona.py](file:///Users/huangyang/code/agent/project_02_chat_agent/03_chat_with_persona.py)
+
+---
+
+## 第五部分：LCEL 与对话 Agent 的关系
+
+在 Day 2 中，我们重点学习了 LangChain 的核心概念 **LCEL (LangChain 表达语言)**，采用 `chain = prompt | model | parser` 这种极简的管道式语法来组装应用。但是，你可能会好奇：**为什么在 Day 3 的对话 Agent 中，我们没有使用 LCEL，而是手写了 `while True` 循环和 `history.get_messages()` 呢？**
+
+这是出于以下工程和设计上的权衡：
+
+### 1. 为什么对话场景不直接使用简单的 LCEL？
+- **多轮交互的复杂状态**：普通的 LCEL 管道是**单次执行、无状态**的。它非常运营于类似于“输入 -> 翻译 -> 结构化输出”这样的单向单次流，但在面对“用户输入 -> 获取历史 -> 模型判断 -> 打印输出 -> 存入历史”这种需要**持续交互和状态变更**的循环中，简单的 `|` 管道很难优雅地维护客户端内存中的状态变更（例如动态清除历史、切换角色）。
+- **流程的可控性**：在终端对话中，我们需要对用户的输入进行拦截处理（例如 `/role` 命令、`/clear` 命令、`exit` 退出信号）。这些命令控制逻辑如果强行塞进 LCEL 管道，会使管道变得异常臃肿，反而失去了 LCEL 简洁明了的优势。
+
+### 2. 在对话场景中，如何正确使用 LCEL？
+虽然我们不直接用 LCEL 编写交互循环，但我们可以在 LCEL 中引入 **带有记忆的 Runnable**。
+LangChain 提供了 `RunnableWithMessageHistory` 来包装一个 LCEL 链，使其自动管理记忆。例如：
+
+```python
+# 示例代码：使用 LCEL + 记忆包装器（概念演示）
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+# 1. 定义基础的 LCEL 链
+chain = prompt | model
+
+# 2. 用记忆包装器封装基础链，使其具备自动读取/存入历史消息的能力
+conversational_chain = RunnableWithMessageHistory(
+    chain,
+    get_session_history=lambda session_id: memory_store[session_id],
+    input_messages_key="input",
+    history_messages_key="history"
+)
+```
+
+> 💡 **架构选择**：
+> 在现阶段，为了让大家**深刻理解短期记忆在内存和 API 请求底层的流转细节**，我们选择手写 `ChatHistory` 管理器和 `while` 循环。这种“透明白盒”的方式更有利于初学者建立稳同的 Agent 底层心智模型。当进入更复杂的图结构编排（如 Day 7 开始的 LangGraph）时，我们将会使用更高级的编排图框架来自动接管这些底层的循环和状态。
 
 ---
 

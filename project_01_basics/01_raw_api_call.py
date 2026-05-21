@@ -68,7 +68,7 @@ API_URL = "https://api.deepseek.com/chat/completions"
 API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 # 使用的模型名称
-MODEL_NAME = "deepseek-chat"
+MODEL_NAME = "deepseek-v4-flash"
 
 
 def raw_chat(messages, temperature=0.7):

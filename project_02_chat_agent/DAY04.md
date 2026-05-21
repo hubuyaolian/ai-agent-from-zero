@@ -95,6 +95,26 @@ print(f"Token 数量: {len(tokens)}")   # 约 8 个 Token
 print(f"Token 列表: {tokens}")        # [57668, 35946, ...]
 ```
 
+> [!WARNING]
+> ### ⚠️ 国产模型与 tiktoken 的兼容性陷阱
+> `tiktoken` 是 OpenAI 专门为其模型（如 GPT-4 等）设计的 Token 计算工具。
+> **如果你的底层大模型使用的是国产模型（如 Qwen, DeepSeek, GLM 等），直接使用 tiktoken 估算中文 Token 会存在显著的误差（偏差可能达到 20% - 30%）**。
+> 这是因为不同厂商的底层分词器（Tokenizer）和词表设计完全不同，特别是对中文文本的分词处理有着巨大差异。
+>
+> **💡 生产级工程最佳回退方案**：
+> 在实际生产中，为了保证 100% 精确的 Token 记账与窗口管理，不要在客户端本地单方面依赖 `tiktoken` 进行静态估算，而应该依赖大模型 API 响应返回的真实 `usage` 结构。
+> LangChain 每次调用返回的响应中，其 `response_metadata` 会包含这一字段。例如：
+>
+> ```python
+> # 获取精确的 Token 消耗数据
+> metadata = response.response_metadata
+> if "token_usage" in metadata:
+>     prompt_tokens = metadata["token_usage"].get("prompt_tokens", 0)
+>     completion_tokens = metadata["token_usage"].get("completion_tokens", 0)
+>     total_tokens = metadata["token_usage"].get("total_tokens", 0)
+> ```
+> 建议在本地使用 `tiktoken` 作为**轻量级的实时估算**（比如用户在输入框打字时的即时预估），而在每一轮对话请求完成后，使用 **API Usage 字段** 更新并校准你的数据库或内存状态，实现“估算+校准”的双重防御机制。
+
 ### 3. 三种主流的截断与压缩策略
 
 #### 策略一：滑动窗口截断 (Sliding Window)

@@ -302,16 +302,20 @@ project_06_multi_agent/
 
 ```
 /Users/huangyang/code/agent/
-├── .env                          # 所有 API Key 统一管理
-├── requirements.txt              # 统一依赖
-├── common/                       # 公共模块（跨项目复用）
-│   ├── __init__.py
-│   ├── model_factory.py          # 模型工厂（一行代码切换模型）
-│   └── config.py                 # 全局配置
-├── project_01_basics/            # 阶段1
-├── project_02_chat_agent/        # 阶段2
-├── project_03_tool_agent/        # 阶段3
-├── project_04_memory_rag/        # 阶段4
-├── project_05_advanced/          # 阶段5
-└── project_06_multi_agent/       # 阶段6
+├── .env                          # 环境变量配置文件（管理 API Key）
+├── .env.example                  # 环境变量配置模板文件
+├── .flake8                       # Flake8 代码格式校验配置文件
+├── requirements.txt              # 统一项目依赖包声明文件
+├── LEARNING_PLAN.md              # 课程学习计划大纲文档（当前文档）
+├── walkthrough.md                # 评审修复与进度指引文档
+├── common/                       # 公共模块目录（跨项目复用）
+│   ├── __init__.py               # 模块初始化
+│   ├── model_factory.py          # 公共模型工厂（统一大模型创建接口）
+│   └── config.py                 # 全局配置读取模块
+├── project_01_basics/            # 阶段 1：API 与框架入门基础目录
+├── project_02_chat_agent/        # 阶段 2：对话 Agent 与消息管理目录
+├── project_03_tool_agent/        # 阶段 3：工具调用与 LangGraph 入门目录
+├── project_04_memory_rag/        # 阶段 4：记忆持久化与知识库 RAG 目录
+├── project_05_advanced/          # 阶段 5：高级 ReAct 与 Planning 规划目录
+└── project_06_multi_agent/       # 阶段 6：多 Agent 协作与综合项目实战目录
 ```
