@@ -11,6 +11,8 @@ Day 6 - 课程 4：自动化的 Agent Loop (智能体循环)。
 import sys
 # 导入系统路径模块
 import os
+# 导入时间模块，用于全局超时熔断
+import time
 
 # 取得当前脚本所在的绝对路径
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +21,10 @@ sys.path.insert(0, os.path.join(CURRENT_DIR, '..'))
 
 # 从公共模块中导入模型构建工厂函数
 from common.model_factory import create_model  # noqa: E402
+# 从公共模块中导入终端 ANSI 颜色常量
+from common.colors import (  # noqa: E402
+    COLOR_RESET, COLOR_GREEN, COLOR_BLUE, COLOR_CYAN, COLOR_YELLOW,
+)
 # 统一导入已定义的全部工具列表
 from tools import ALL_TOOLS  # noqa: E402
 # 导入 LangChain 的消息基础类
@@ -26,13 +32,6 @@ from langchain_core.messages import (  # noqa: E402
     HumanMessage,    # 用户发送的消息
     ToolMessage,     # 反馈工具执行结果的消息
 )
-
-# 终端 ANSI 颜色定义，用于高亮显示 Agent 思考过程
-COLOR_RESET = "\033[0m"      # 重置样式
-COLOR_GREEN = "\033[32m"     # 绿色表示用户
-COLOR_BLUE = "\033[34m"      # 蓝色表示 AI 回复
-COLOR_CYAN = "\033[36m"      # 青色表示系统状态
-COLOR_YELLOW = "\033[33m"    # 黄色表示工具执行
 
 # 建立工具名称到工具实例字典的映射，便于动态调用
 TOOLS_MAP = {}
@@ -69,11 +68,20 @@ def run_agent_loop(user_query):
     loop_count = 0
     # 限制最大运行步骤数，防止陷入无限死循环
     max_loops = 5
+    # 全局超时阈值（秒），防止单次请求消耗过长时间（第三层防御）
+    timeout_seconds = 60
+    # 记录循环开始时间
+    start_time = time.time()
 
     # 启动自动化的推理与行动循环
     while loop_count < max_loops:
         # 累加循环步数
         loop_count += 1
+
+        # 检查是否超出全局超时阈值
+        if time.time() - start_time > timeout_seconds:
+            print(f"❌ 警告：Agent 运行超出 {timeout_seconds} 秒全局超时限制，强制中止！")
+            break
         # 打印当前思考提示
         print(f"{COLOR_CYAN}🤔 AI 正在思考... [步数: {loop_count}]{COLOR_RESET}")
 

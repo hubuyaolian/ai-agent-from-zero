@@ -40,6 +40,9 @@ from langgraph.graph.message import add_messages  # noqa: E402
 from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
 
 # 尝试导入 tiktoken 以精确控制上下文窗口大小
+# 注意：tiktoken 的 cl100k_base 编码器是针对 OpenAI 模型设计的，
+# 对 DeepSeek/Qwen 等国产模型的 Token 计数存在偏差（通常偏高）。
+# 这里仅作粗略估算使用，生产环境应使用各模型厂商提供的 Token 计数 API。
 try:
     # 导入 tiktoken 包
     import tiktoken
@@ -48,13 +51,10 @@ except ImportError:
     # 若缺失则置为空，后面走备用兜底逻辑
     tiktoken = None
 
-# 终端 ANSI 样式彩色高亮代码
-COLOR_RESET = "\033[0m"      # 重置样式
-COLOR_GREEN = "\033[32m"     # 绿色表示用户
-COLOR_BLUE = "\033[34m"      # 蓝色表示 AI 回复
-COLOR_CYAN = "\033[36m"      # 青色表示系统运行
-COLOR_YELLOW = "\033[33m"    # 黄色表示工具状态
-COLOR_RED = "\033[31m"       # 红色表示报错或敏感警告
+# 从公共模块中导入终端 ANSI 颜色常量
+from common.colors import (  # noqa: E402
+    COLOR_RESET, COLOR_GREEN, COLOR_BLUE, COLOR_CYAN, COLOR_YELLOW, COLOR_RED,
+)
 
 # 将所有导出的工具存入一个字典方便执行匹配
 TOOLS_MAP = {}
@@ -70,6 +70,10 @@ SYSTEM_PROMPT = (
     "当用户的问题需要数学计算、文件读取、网络检索或运行代码时，"
     "请毫不犹豫地调用相应工具。"
 )
+
+# 在模块级别创建模型实例，避免在 agent_node 每次调用时重复创建
+_MODEL = create_model("deepseek", temperature=0.1)
+_MODEL_WITH_TOOLS = _MODEL.bind_tools(ALL_TOOLS)
 
 
 class AgentState(TypedDict):
@@ -191,13 +195,8 @@ def agent_node(state: AgentState):
     # 实施 Token 窗口剪裁限制（控制在 3000 Token 内）
     trimmed_msgs = trim_history(raw_msgs, max_tokens=3000)
 
-    # 实例化大模型，使用低温度以确保工具参数生成的确定性
-    model = create_model("deepseek", temperature=0.1)
-    # 将工具列表绑定到大模型上
-    model_with_tools = model.bind_tools(ALL_TOOLS)
-
-    # 运行大模型预测生成响应消息
-    response = model_with_tools.invoke(trimmed_msgs)
+    # 使用模块级别的模型实例（避免每次调用时重复创建）
+    response = _MODEL_WITH_TOOLS.invoke(trimmed_msgs)
 
     # 返回消息对象，通过归约器追加到 messages 中
     return {"messages": [response]}
@@ -206,6 +205,9 @@ def agent_node(state: AgentState):
 def tool_node(state: AgentState):
     """
     工具节点：在运行敏感工具（写文件、运行代码）前，请求用户交互确认。
+
+    注意：这里使用 input() 实现简化版的人类确认，适合入门学习。
+    Day 13 将介绍 LangGraph 原生的 interrupt_before 机制，是生产级的人类介入方案。
     """
     # 获取最后一条包含 tool_calls 的 AI 推理消息
     last_message = state["messages"][-1]

@@ -189,7 +189,7 @@ app = graph.compile()
 | 新增分支 | 改动核心循环代码（高风险） | 添加新节点和边（低风险） |
 | 可视化 | 无 | 支持 `graph.get_graph().draw_mermaid()` |
 | 断点调试 | 困难 | 支持 checkpoint、time-travel 等高级调试 |
-| 人类介入 | 需要手动实现 | 内置 `interrupt_before` / `interrupt_after` |
+| 人类介入 | 需要手动实现（如 `input()` 拦截） | 内置 `interrupt_before` / `interrupt_after`（Day 13 详解） |
 | 并行执行 | 需要手写线程 | 支持 Send API 并行分支 |
 
 ### 2. 图结构的可视化
@@ -311,6 +311,20 @@ state["messages"] = [new_msg]
 state["messages"] = state["messages"] + [new_msg]
 ```
 
+### LangGraph 的消息自动转换
+
+在 `06_langgraph_agent.py` 中，我们传入初始消息时使用了字典格式：
+
+```python
+test_input = {
+    "messages": [
+        {"role": "user", "content": "北京的天气如何？"}
+    ]
+}
+```
+
+LangGraph 的 `add_messages` Reducer 在追加消息时，会**自动将字典转换为对应的 Message 对象**（`{"role": "user"}` → `HumanMessage`，`{"role": "assistant"}` → `AIMessage` 等）。因此你可以混用字典和 Message 对象，但建议统一使用 Message 对象以保持代码清晰。
+
 这个机制确保了消息历史不会因为节点返回而丢失，每个节点的输出都会累积到完整的对话上下文中。
 
 ### Checkpoint：图执行的"存档点"
@@ -333,6 +347,20 @@ app = graph.compile(checkpointer=checkpointer)
 config = {"configurable": {"thread_id": "user_001"}}
 result = app.invoke({"messages": [HumanMessage(content="你好")]}, config)
 ```
+
+### update_state 与 as_node 参数
+
+在完整版 Agent（`07_tool_agent_complete.py`）中，`/clear` 命令使用了 `app.update_state()` 来重置对话历史：
+
+```python
+app.update_state(
+    thread_config,
+    {"messages": [SystemMessage(content=SYSTEM_PROMPT)]},
+    as_node="agent"
+)
+```
+
+这里的 `as_node` 参数是关键：它告诉 LangGraph "这条状态更新是由哪个节点产生的"。由于我们的 `messages` 字段使用了 `add_messages` Reducer（追加模式），如果 `update_state` 提供的是完整的消息列表，它会**替换**而非追加——这正是我们重置历史时想要的行为。`as_node="agent"` 确保这次更新在图的执行记录中被正确归属，避免状态校验报错。
 
 ---
 
