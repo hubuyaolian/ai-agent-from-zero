@@ -39,6 +39,8 @@ graph LR
     C --> D["阶段4<br>记忆与RAG<br>3天"]
     D --> E["阶段5<br>高级Agent模式<br>3天"]
     E --> F["阶段6<br>多Agent系统<br>3-4天"]
+    F --> G["毕业项目一<br>企业级RAG<br>2天"]
+    G --> H["毕业项目二<br>流程自动化Agent<br>2天"]
 ```
 
 ---
@@ -298,6 +300,184 @@ project_06_multi_agent/
 
 ---
 
+## 毕业项目：企业级 RAG 智能知识库问答 Agent（2 天）
+
+> [!IMPORTANT]
+> 这是整个课程的毕业项目，综合运用 Day 1-17 所学的全部核心能力。
+
+### 学习目标
+- 将基础 RAG 升级为企业级架构：多路召回、混合分块、质量闭环
+- 实现对话记忆与指代消解，支持多轮连续问答
+- 实现来源溯源，回答可追溯到原文档页码
+- 用 LangGraph 编排完整的 6 节点 RAG 工作流
+
+### Day 18：企业级 RAG 架构设计
+
+```
+project_07_enterprise_rag/
+├── config.py                    # 项目配置
+├── ingestion/
+│   ├── loader.py                # DocumentLoaderFactory（PDF/DOCX/MD/TXT）
+│   └── chunker.py               # HybridChunker（标题感知 + 语义边界）
+├── retrieval/
+│   ├── vector_store.py          # VectorStoreManager（ChromaDB）
+│   ├── keyword_search.py        # KeywordSearcher（BM25 + jieba）
+│   ├── hybrid_retriever.py      # HybridRetriever（RRF 融合）
+│   └── reranker.py              # LLMReranker（LLM 打分重排）
+└── requirements.txt
+```
+
+**核心升级**：
+- 多格式文档加载（PDF/DOCX/MD/TXT）
+- 标题感知 + 语义边界的混合分块
+- 向量检索 + BM25 关键词检索双路召回 + RRF 融合
+- LLM 重排序精排过滤
+
+### Day 19：工作流编排与完整应用
+
+```
+project_07_enterprise_rag/
+├── memory/
+│   └── conversation_store.py    # ConversationStore（SQLite 多会话）
+├── citation/
+│   └── source_tracker.py        # SourceTracker（引用标注 + 溯源列表）
+├── graph/
+│   ├── state.py                 # EnterpriseRAGState
+│   └── workflow.py              # 6 节点 LangGraph 状态图
+└── main.py                      # CLI 入口
+```
+
+**核心能力**：
+- 对话记忆 + LLM 指代消解（IntentResolver）
+- 来源追踪：引用标注 [1][2] + 末尾引用列表
+- LangGraph 6 节点图：意图解析→混合检索→重排→生成→质量检查→格式化
+- 质量闭环：LLM 自评 + 重试循环（最多 2 次）
+- CLI 交互：/import、/history、/session 等命令
+
+---
+
+## 毕业项目二：自动化业务流程调度 Agent（2 天）
+
+> [!IMPORTANT]
+> 面试高频深挖项目，工业级落地最强的「应用型 Agent」。
+
+### 学习目标
+- 掌握统一工具注册机制（ToolRegistry）：注册、校验、权限、分组
+- 掌握 LLM 驱动的任务拆解：将复杂指令分解为可执行子任务链
+- 实现日报/周报全自动生成流程，替代人工整理工作
+- 掌握指数退避重试、降级替代、异常日志等容错机制
+- 实现 Cron 定时调度 + 事件触发双模式
+
+### Day 20：工具注册机制与任务拆解
+
+```
+project_08_workflow_agent/
+├── config.py                    # 项目配置
+├── tools/
+│   ├── registry.py              # ToolRegistry 统一注册中心
+│   ├── file_tools.py            # 文件处理（读/写/归档/清理）
+│   ├── excel_tools.py           # Excel 读写（openpyxl）
+│   ├── data_tools.py            # 数据清洗/统计/转换
+│   ├── text_tools.py            # 文本提取/格式化
+│   ├── notify_tools.py          # 消息推送（模拟企业微信/邮件）
+│   └── schedule_tools.py        # 定时任务注册/查询
+├── planner/
+│   └── task_planner.py          # TaskPlanner 任务拆解
+└── requirements.txt
+```
+
+**核心能力**：
+- ToolRegistry：注册/分组/校验/权限/降级替代/调用日志
+- 10+ 业务工具：文件、Excel、数据清洗、文本、通知、调度
+- TaskPlanner：工具约束感知的 LLM 任务拆解
+- ExecutionPlan + 拓扑排序 + 依赖解析
+
+### Day 21：执行引擎、容错重试与定时调度
+
+```
+project_08_workflow_agent/
+├── executor/
+│   └── workflow_engine.py       # LangGraph 执行引擎
+├── reports/
+│   └── report_generator.py      # 日报/周报生成器
+├── error_handler/
+│   └── retry.py                 # 指数退避重试 + 降级替代 + 异常日志
+├── scheduler/
+│   └── task_scheduler.py        # Cron 定时 + 事件触发
+├── graph/
+│   ├── state.py                 # WorkflowState
+│   └── workflow.py              # 4 节点执行图
+└── main.py                      # CLI 入口
+```
+
+**核心能力**：
+- LangGraph 4 节点执行图：plan → execute → validate → report
+- 质量闭环：LLM 校验 + 重新规划（最多 2 次）
+- RetryHandler：指数退避重试 + 降级替代
+- ErrorLogger：异常日志持久化
+- TaskScheduler：Cron 定时调度 + 目录监控触发
+- ReportGenerator：日报/周报全自动生成 + 推送通知
+
+---
+
+## 毕业项目三：多智能体协同开发助手系统（2 天）
+
+> [!IMPORTANT]
+> 高阶、架构级项目，面试加分极强。解决单智能体复杂任务能力不足的问题，实现软件开发全流程辅助。
+
+### 学习目标
+- 掌握四角色智能体架构：规划/开发/测试/文档
+- 掌握多 Agent 消息通信与任务流转机制
+- 实现"写代码→查代码→改代码"自检闭环
+- 实现从需求输入到项目交付的全自动闭环
+
+### Day 22：角色分工与消息通信
+
+```
+project_09_dev_team/
+├── agents/
+│   ├── __init__.py
+│   ├── planner.py               # 规划Agent（需求分析、任务拆解、架构设计）
+│   ├── developer.py             # 开发Agent（代码编写、Bug 修复）
+│   ├── tester.py                # 测试Agent（代码审查、BUG 检测、安全扫描）
+│   └── docwriter.py             # 文档Agent（注释、API 文档、README）
+├── messages/
+│   ├── __init__.py
+│   └── message_bus.py           # Agent 间消息总线
+├── graph/
+│   ├── __init__.py
+│   └── state.py                 # DevTeamState 定义
+└── requirements.txt
+```
+
+**核心能力**：
+- 四角色 System Prompt 设计 + 工具隔离
+- MessageBus 消息总线 + TaskAssignment/TaskResult 结构
+- 规划 Agent 的需求结构化拆解（模糊需求→功能点+接口清单+任务列表）
+- 多 Agent 编排三种模式：线性流水线 / 主管调度 / 流水线+反馈循环
+
+### Day 23：工作流编排与自动交付
+
+```
+project_09_dev_team/
+├── graph/
+│   └── workflow.py              # 6 节点 LangGraph 工作流
+├── templates/
+│   └── bug_report.md            # Bug 反馈模板
+├── data/
+│   └── output/                  # 产出目录
+└── main.py                      # CLI 入口
+```
+
+**核心能力**：
+- LangGraph 6 节点工作流：planner→developer→tester→fixer→docwriter→deliver
+- "写→查→改"自检闭环（最多 3 轮修复循环）
+- 代码产物解析与持久化
+- 完整交付报告生成（架构+代码+测试+文档+协作统计）
+- CLI 交互式开发流程
+
+---
+
 ## 项目结构总览
 
 ```
@@ -311,11 +491,15 @@ project_06_multi_agent/
 ├── common/                       # 公共模块目录（跨项目复用）
 │   ├── __init__.py               # 模块初始化
 │   ├── model_factory.py          # 公共模型工厂（统一大模型创建接口）
+│   ├── colors.py                 # 终端 ANSI 颜色常量
 │   └── config.py                 # 全局配置读取模块
 ├── project_01_basics/            # 阶段 1：API 与框架入门基础目录
 ├── project_02_chat_agent/        # 阶段 2：对话 Agent 与消息管理目录
 ├── project_03_tool_agent/        # 阶段 3：工具调用与 LangGraph 入门目录
 ├── project_04_memory_rag/        # 阶段 4：记忆持久化与知识库 RAG 目录
 ├── project_05_advanced/          # 阶段 5：高级 ReAct 与 Planning 规划目录
-└── project_06_multi_agent/       # 阶段 6：多 Agent 协作与综合项目实战目录
+├── project_06_multi_agent/       # 阶段 6：多 Agent 协作与综合项目实战目录
+├── project_07_enterprise_rag/    # 毕业项目一：企业级 RAG 智能知识库问答 Agent
+├── project_08_workflow_agent/    # 毕业项目二：自动化业务流程调度 Agent
+└── project_09_dev_team/          # 毕业项目三：多智能体协同开发助手系统
 ```

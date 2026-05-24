@@ -27,7 +27,7 @@ MODEL_CONFIGS = {
     "deepseek": {
         "base_url": "https://api.deepseek.com",  # DeepSeek 官方 API 地址
         "api_key": os.getenv("DEEPSEEK_API_KEY", ""),  # 从环境变量读取 Key
-        "default_model": "deepseek-chat",  # 默认模型：DeepSeek-V3
+        "default_model": "deepseek-v4-flash",  # 默认模型：DeepSeek-V3
     },
     "qwen": {
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",  # 阿里云兼容接口
@@ -44,13 +44,18 @@ MODEL_CONFIGS = {
         "api_key": os.getenv("KIMI_API_KEY", ""),  # 从环境变量读取 Key
         "default_model": "moonshot-v1-8k",  # 默认模型：Kimi 8K 上下文
     },
+    "minimax": {
+        "base_url": "https://api.minimaxi.com/v1",  # 火山方舟 OpenAI 兼容接口
+        "api_key": os.getenv("MINIMAX_API_KEY", ""),  # 从环境变量读取 Key
+        "default_model": "MiniMax-M2.7",  # 默认模型：方舟 Coding Plan
+    },
 }
 
 # ============================================================
 # Gemini 单独配置（不走 OpenAI 兼容接口，使用 Google 官方 SDK）
 # ============================================================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Gemini 的 API Key
-GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"  # 默认使用 Gemini 2.0 Flash
+GEMINI_DEFAULT_MODEL = "gemini-3.1-flash-lite"  # 默认使用 Gemini 3.1 Flash Lite
 
 
 def get_model_config(provider):
