@@ -24,6 +24,11 @@ load_dotenv()
 #   - default_model: 默认使用的模型名称
 # ============================================================
 MODEL_CONFIGS = {
+    "xiaomi mimo": {
+        "base_url": "https://api.xiaomimimo.com/v1",  # mimo 官方 API 地址
+        "api_key": os.getenv("MIMO_API_KEY", ""),  # 从环境变量读取 Key
+        "default_model": "mimo-v2.5",  # 默认模型：MiMo-V2.5
+    },
     "deepseek": {
         "base_url": "https://api.deepseek.com",  # DeepSeek 官方 API 地址
         "api_key": os.getenv("DEEPSEEK_API_KEY", ""),  # 从环境变量读取 Key

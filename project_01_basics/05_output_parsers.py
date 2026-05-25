@@ -55,7 +55,7 @@ sys.path.insert(
 # 从 LangChain 导入输出解析器
 from langchain_core.output_parsers import StrOutputParser  # 字符串解析器
 from langchain_core.output_parsers import JsonOutputParser  # JSON 解析器
-from langchain.output_parsers import PydanticOutputParser  # Pydantic 解析器
+from langchain_core.output_parsers import PydanticOutputParser  # Pydantic 解析器
 
 # 从 LangChain 导入提示词模板
 from langchain_core.prompts import ChatPromptTemplate  # 聊天模板
