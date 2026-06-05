@@ -19,7 +19,7 @@ class VectorStoreManager:
         persist_directory: str | Path = CHROMA_DIR,
         *,
         collection_name: str = COLLECTION_NAME,
-        embedding_provider: str = "deepseek",
+        embedding_provider: str = "local",
         embedding_model: str = EMBEDDING_MODEL,
     ):
         self.persist_directory = Path(persist_directory)
@@ -73,21 +73,32 @@ class VectorStoreManager:
     def _create_vectorstore(self):
         try:
             from langchain_chroma import Chroma
-            from langchain_openai import OpenAIEmbeddings
         except ImportError as exc:
-            raise ImportError("向量检索需要安装 langchain-chroma 和 langchain-openai") from exc
+            raise ImportError("向量检索需要安装 langchain-chroma") from exc
 
-        config = get_model_config(self.embedding_provider)
-        if not config.get("api_key"):
-            raise RuntimeError(
-                f"缺少 {self.embedding_provider} API Key，无法创建 Embedding。"
-                "请配置 .env，或只运行不需要向量化的离线模块。"
+        # 本地 embedding：走 sentence-transformers，无需 API Key
+        if self.embedding_provider == "local":
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+            embeddings = HuggingFaceEmbeddings(
+                model_name=self.embedding_model,
+                model_kwargs={"device": "cpu"},  # 无 GPU 环境走 CPU；有 GPU 可改 "cuda"
+                encode_kwargs={"normalize_embeddings": True},
             )
-        embeddings = OpenAIEmbeddings(
-            model=self.embedding_model,
-            base_url=config["base_url"],
-            api_key=config["api_key"],
-        )
+        else:
+            # 远端 embedding：走 OpenAI 兼容接口（保留兜底分支）
+            from langchain_openai import OpenAIEmbeddings
+            config = get_model_config(self.embedding_provider)
+            if not config.get("api_key"):
+                raise RuntimeError(
+                    f"缺少 {self.embedding_provider} API Key，无法创建 Embedding。"
+                    "请配置 .env，或只运行不需要向量化的离线模块。"
+                )
+            embeddings = OpenAIEmbeddings(
+                model=self.embedding_model,
+                base_url=config["base_url"],
+                api_key=config["api_key"],
+            )
+
         self.persist_directory.mkdir(parents=True, exist_ok=True)
         return Chroma(
             collection_name=self.collection_name,

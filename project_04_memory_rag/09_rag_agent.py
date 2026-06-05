@@ -17,15 +17,13 @@ from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, ToolMessage, SystemMessage
 # 导入 Chroma 向量存储组件
 from langchain_chroma import Chroma
-# 导入 OpenAIEmbeddings
-from langchain_openai import OpenAIEmbeddings
+# 导入本地 Embedding 包装类（底层依赖 sentence-transformers）
+from langchain_community.embeddings import HuggingFaceEmbeddings
 # 导入单文件加载类 TextLoader
 from langchain_community.document_loaders import TextLoader
 # 导入递归文本分块器
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# 导入配置获取方法
-from common.config import get_model_config
 # 导入公共模型工厂函数
 from common.model_factory import create_model
 
@@ -285,12 +283,11 @@ def main():
     splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=30)
     chunks = splitter.split_documents(documents)
 
-    # 配置 Embedding 模型（沿用 deepseek 的 OpenAI 兼容接口作为第二个模型服务）
-    embedding_config = get_model_config("deepseek")
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
-        base_url=embedding_config["base_url"],
-        api_key=embedding_config["api_key"]
+    # 配置本地 Embedding 模型（无需 API Key），默认 BAAI/bge-small-zh-v1.5
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-small-zh-v1.5",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
     )
     # 存入本地库
     vectorstore = Chroma.from_documents(

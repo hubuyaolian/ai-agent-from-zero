@@ -16,15 +16,13 @@ import shutil
 from langchain_core.messages import HumanMessage, AIMessage
 # 导入 Chroma 向量存储类
 from langchain_chroma import Chroma
-# 导入 OpenAIEmbeddings 类
-from langchain_openai import OpenAIEmbeddings
+# 导入本地 Embedding 包装类（底层依赖 sentence-transformers）
+from langchain_community.embeddings import HuggingFaceEmbeddings
 # 导入单文件加载类 TextLoader
 from langchain_community.document_loaders import TextLoader
 # 导入递归文本分块器
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# 导入全局配置方法
-from common.config import get_model_config
 # 导入模型创建工厂函数
 from common.model_factory import create_model
 
@@ -252,14 +250,12 @@ def main():
     # 定义本地持久化向量库的物理存储路径
     db_persist_dir = "./personal_knowledge_base"
 
-    print("🔮 正在加载 Embedding 模块...")
-    # embedding 作为第二个模型服务，沿用 deepseek 的 OpenAI 兼容接口
-    embedding_config = get_model_config("deepseek")
-    # 创建 Embedding 实例
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
-        base_url=embedding_config["base_url"],
-        api_key=embedding_config["api_key"]
+    print("🔮 正在加载本地 Embedding 模块（首次运行会自动下载模型）...")
+    # embedding 改走本地模型（无需 API Key），默认 BAAI/bge-small-zh-v1.5
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-small-zh-v1.5",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
     )
 
     # 初始化/载入本地持久化 Chroma 数据库

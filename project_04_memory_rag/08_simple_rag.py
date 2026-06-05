@@ -13,8 +13,8 @@ import os
 import shutil
 # 导入 LangChain 的 Chroma 适配器
 from langchain_chroma import Chroma
-# 导入 OpenAI 兼容的 Embedding 模型包装器
-from langchain_openai import OpenAIEmbeddings
+# 导入本地 Embedding 包装器（底层依赖 sentence-transformers）
+from langchain_community.embeddings import HuggingFaceEmbeddings
 # 导入单文件加载类 TextLoader
 from langchain_community.document_loaders import TextLoader
 # 导入递归文本分块器
@@ -25,9 +25,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 # 导入直通透传组件，用于 LCEL 参数映射
 from langchain_core.runnables import RunnablePassthrough
-
-# 从公共配置中导入获取 API 配置的函数
-from common.config import get_model_config
 # 从项目公共模型工厂中导入模型创建函数
 from common.model_factory import create_model
 
@@ -144,14 +141,12 @@ def main():
     print(f"✂️ 已将源文档切分为 {len(chunks)} 个文本块。")
 
     # 步骤 2：向量化并写入本地 ChromaDB 向量数据库
-    print("\n🔮 正在配置 Embedding 并构建向量索引...")
-    # embedding 作为第二个模型服务，沿用 deepseek 的 OpenAI 兼容接口
-    embedding_config = get_model_config("deepseek")
-    # 创建 Embedding 模型对象
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
-        base_url=embedding_config["base_url"],
-        api_key=embedding_config["api_key"]
+    print("\n🔮 正在配置本地 Embedding 并构建向量索引（首次运行会自动下载模型）...")
+    # embedding 改走本地模型（无需 API Key），默认 BAAI/bge-small-zh-v1.5
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-small-zh-v1.5",
+        model_kwargs={"device": "cpu"},  # 无 GPU 环境走 CPU；有 GPU 可改 "cuda"
+        encode_kwargs={"normalize_embeddings": True},
     )
     # 调用 Chroma 静态方法，一次性将文档块向量化并写入数据库中
     vectorstore = Chroma.from_documents(

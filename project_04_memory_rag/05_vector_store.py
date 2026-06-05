@@ -15,11 +15,8 @@ import shutil
 from langchain_core.documents import Document
 # 导入 LangChain-Chroma 适配器
 from langchain_chroma import Chroma
-# 导入 OpenAIEmbeddings 类
-from langchain_openai import OpenAIEmbeddings
-
-# 导入配置获取方法
-from common.config import get_model_config
+# 导入本地 Embedding 包装类（底层依赖 sentence-transformers）
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 def reset_database(directory_path):
@@ -57,16 +54,13 @@ def main():
     # 在创建前，重置一下数据库，确保演示不受历史残留数据干扰
     reset_database(db_directory)
 
-    print("🔮 正在初始化 Embedding 模型...")
-    # 教学阶段 04 之后默认 LLM 是 xiaomi mimo；
-    # embedding 作为第二个模型服务，沿用 deepseek 的 OpenAI 兼容接口。
-    embedding_config = get_model_config("deepseek")
-
-    # 创建 Embedding 模型实例
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
-        base_url=embedding_config["base_url"],  # 传入兼容的 API 地址
-        api_key=embedding_config["api_key"]  # 传入密钥
+    print("🔮 正在初始化本地 Embedding 模型（首次运行会自动下载）...")
+    # 教学阶段 04 之后默认 LLM 是 xiaomi mimo，embedding 改走本地模型（无需 API Key）
+    # 默认模型：BAAI/bge-small-zh-v1.5，中文专用、~93M 参数
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-small-zh-v1.5",
+        model_kwargs={"device": "cpu"},  # 无 GPU 环境走 CPU；有 GPU 可改 "cuda"
+        encode_kwargs={"normalize_embeddings": True},  # 归一化后余弦相似度等价于点积
     )
 
     print("\n📦 正在连接/创建本地 Chroma 向量存储...")

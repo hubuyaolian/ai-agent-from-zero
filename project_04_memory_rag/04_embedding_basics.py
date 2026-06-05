@@ -2,16 +2,13 @@
 """
 Day 9 演示：Embedding 概念与语义相似度手动计算。
 
-功能：演示如何使用通义千问兼容接口将文本转化为高维数值向量，并手动计算余弦相似度。
+功能：演示如何使用本地 sentence-transformers 模型将文本转化为高维数值向量，并手动计算余弦相似度。
 输入参数：无（内部定义测试文本）。
 输出返回值：打印各文本的向量特征以及两两之间的语义相似度。
 """
 
-# 导入 LangChain 的 OpenAIEmbeddings 包装类
-from langchain_openai import OpenAIEmbeddings
-
-# 从项目的公共配置模块中导入获取模型配置的函数
-from common.config import get_model_config
+# 导入 LangChain 的 HuggingFaceEmbeddings 包装类（底层依赖 sentence-transformers）
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 def calculate_cosine_similarity(vector_a, vector_b):
@@ -67,17 +64,14 @@ def main():
 
     功能：执行 Embedding 向量化流程，并计算两组文本之间的余弦相似度。
     """
-    print("🔮 正在初始化 Embedding 模型...")
+    print("🔮 正在初始化本地 Embedding 模型（首次运行会自动下载）...")
 
-    # 教学阶段 04 之后统一以 xiaomi mimo 为默认 LLM；
-    # 本文件仅使用 embedding 服务，因此沿用 deepseek 作为兼容 OpenAI 格式的 embedding 提供方。
-    embedding_config = get_model_config("deepseek")
-
-    # 初始化 OpenAIEmbeddings，使用 deepseek 的 OpenAI 兼容接口
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
-        base_url=embedding_config["base_url"],  # 兼容 OpenAI 的 API 基地址
-        api_key=embedding_config["api_key"]  # 从配置中获取的 API Key
+    # 教学阶段 04 之后统一以 xiaomi mimo 为默认 LLM，embedding 改走本地模型（无需 API Key）
+    # 默认模型：BAAI/bge-small-zh-v1.5，中文专用、~93M 参数、HuggingFace 开源
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-small-zh-v1.5",
+        model_kwargs={"device": "cpu"},  # 无 GPU 环境走 CPU；有 GPU 可改 "cuda"
+        encode_kwargs={"normalize_embeddings": True},  # 归一化后余弦相似度等价于点积
     )
 
     # 准备用于语义测试的文本列表
