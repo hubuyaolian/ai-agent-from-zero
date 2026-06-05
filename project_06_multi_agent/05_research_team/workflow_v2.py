@@ -245,9 +245,9 @@ def reviewer_node_v2(state: ResearchTeamStateV2) -> dict:
     """
     print("\n⚖️ [Node: Reviewer] 评审专家开始调阅最新版的报告正文并计算评分...")
 
-    # 从大模型工厂获取模型，温度调低至 0.2，保障评审判定尺度逻辑的一致与极其稳定
+    # 从大模型工厂获取模型（教学阶段 04 之后默认 LLM 走 xiaomi mimo），温度 0.2 保障评审稳定性
     model = create_model(
-        provider="deepseek",
+        provider="xiaomi mimo",
         temperature=0.2
     )
 

@@ -116,10 +116,10 @@ def main():
 
     功能：初始化 Qwen 模型，定义 ReAct 系统提示词，执行交替循环驱动 Thought 与 Action，展示底层解密效果。
     """
-    print("🧠 正在初始化底层大模型（通义千问）...")
-    # 使用公共模型工厂创建 Qwen 实例。
+    print("🧠 正在初始化底层大模型（xiaomi mimo）...")
+    # 教学阶段 04 之后默认 LLM 统一走 xiaomi mimo
     # 特别注意：我们将 temperature 设为 0.0，使大模型的输出完全具备确定性和逻辑约束力！
-    chat_model = create_model(provider="qwen", temperature=0.0)
+    chat_model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 精心编写的 ReAct 学术解密 System Prompt。
     # 核心原理：强力规约大模型在每一步必须显式写出 Thought 与 Action 标签，并禁止一次性编造 Observation！

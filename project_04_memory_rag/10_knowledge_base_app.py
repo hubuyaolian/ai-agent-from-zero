@@ -252,14 +252,14 @@ def main():
     # 定义本地持久化向量库的物理存储路径
     db_persist_dir = "./personal_knowledge_base"
 
-    print("🔮 正在加载通义千问 Embedding 模块...")
-    # 获取通义千问配置
-    qwen_config = get_model_config("qwen")
+    print("🔮 正在加载 Embedding 模块...")
+    # embedding 作为第二个模型服务，沿用 deepseek 的 OpenAI 兼容接口
+    embedding_config = get_model_config("deepseek")
     # 创建 Embedding 实例
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",
-        base_url=qwen_config["base_url"],
-        api_key=qwen_config["api_key"]
+        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
+        base_url=embedding_config["base_url"],
+        api_key=embedding_config["api_key"]
     )
 
     # 初始化/载入本地持久化 Chroma 数据库
@@ -269,8 +269,8 @@ def main():
         persist_directory=db_persist_dir
     )
 
-    # 初始化大模型实例，使用统一的 create_model 工厂函数
-    chat_model = create_model(provider="qwen", temperature=0.2)
+    # 初始化大模型实例，使用统一的 create_model 工厂函数，默认走 xiaomi mimo
+    chat_model = create_model(provider="xiaomi mimo", temperature=0.2)
 
     # 定义文本分块工具：chunk_size=400，重合度=50
     text_splitter = RecursiveCharacterTextSplitter(

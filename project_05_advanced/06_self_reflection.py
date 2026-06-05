@@ -68,8 +68,8 @@ def generator_node(state: ReflectionState):
 
     print(f"\n✍️ [Node: Generator] 正在开展第 {updated_iter} 轮内容撰写工作...")
 
-    # 从公共工厂创建生成器模型实例
-    generator_model = create_model(provider="qwen", temperature=0.5)
+    # 从公共工厂创建生成器模型实例（教学阶段 04 之后默认 LLM 走 xiaomi mimo）
+    generator_model = create_model(provider="xiaomi mimo", temperature=0.5)
 
     # 如果反馈为空，说明是第一轮初始生成
     if not state["feedback"]:
@@ -118,8 +118,8 @@ def evaluator_node(state: ReflectionState):
         dict: 更新反馈内容 feedback 字段。
     """
     print("\n🧐 [Node: Evaluator] 评审专家正在对当前的回答质量进行硬核审计...")
-    # 从工厂创建评审模型
-    evaluator_model = create_model(provider="qwen", temperature=0.0)
+    # 从工厂创建评审模型（evaluator 是 2 号 LLM，沿用 deepseek 作为"其他"）
+    evaluator_model = create_model(provider="deepseek", temperature=0.0)
 
     # 构造评审 Prompt，强制要求大模型按照 JSON 决策
     eval_prompt = (

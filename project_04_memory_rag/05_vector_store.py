@@ -57,15 +57,16 @@ def main():
     # 在创建前，重置一下数据库，确保演示不受历史残留数据干扰
     reset_database(db_directory)
 
-    print("🔮 正在初始化通义千问 Embedding 模型...")
-    # 获取通义千问 API 密钥和基地址配置
-    qwen_config = get_model_config("qwen")
+    print("🔮 正在初始化 Embedding 模型...")
+    # 教学阶段 04 之后默认 LLM 是 xiaomi mimo；
+    # embedding 作为第二个模型服务，沿用 deepseek 的 OpenAI 兼容接口。
+    embedding_config = get_model_config("deepseek")
 
     # 创建 Embedding 模型实例
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 使用通义千问 v3 Embedding 模型
-        base_url=qwen_config["base_url"],  # 传入兼容的 API 地址
-        api_key=qwen_config["api_key"]  # 传入密钥
+        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
+        base_url=embedding_config["base_url"],  # 传入兼容的 API 地址
+        api_key=embedding_config["api_key"]  # 传入密钥
     )
 
     print("\n📦 正在连接/创建本地 Chroma 向量存储...")

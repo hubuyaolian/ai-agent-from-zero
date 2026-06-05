@@ -90,9 +90,9 @@ def main():
 
     功能：初始化 Qwen 模型，定义 ReAct 系统提示词，利用 LangGraph 编译状态图，流式运行任务并解析流数据。
     """
-    print("🧠 正在配置底层大模型（通义千问）并绑定外部工具...")
-    # 使用统一的模型工厂创建 qwen 聊天大模型实例，温度设为 0.0
-    base_model = create_model(provider="qwen", temperature=0.0)
+    print("🧠 正在配置底层大模型（xiaomi mimo）并绑定外部工具...")
+    # 教学阶段 04 之后默认 LLM 统一走 xiaomi mimo，温度设为 0.0
+    base_model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 将定义的工具存入工具列表中
     my_tools = [get_weather, calculate]

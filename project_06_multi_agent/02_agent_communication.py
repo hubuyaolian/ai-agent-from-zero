@@ -63,8 +63,8 @@ def optimist_node(state: DebateState):
     """
     print("\n🚀 [Node: Optimist] 乐观布道师正在积极组织正面观点陈述...")
 
-    # 从工厂获取主力 DeepSeek 模型，设置较高随机性释放创造力
-    model = create_model(provider="deepseek", temperature=0.7)
+    # 从工厂获取主力模型（教学阶段 04 之后默认 LLM 走 xiaomi mimo），设置较高随机性释放创造力
+    model = create_model(provider="xiaomi mimo", temperature=0.7)
 
     # 构造针对性人设提示词
     optimist_prompt = (
@@ -99,7 +99,7 @@ def pessimist_node(state: DebateState):
     """
     print("\n🛡️ [Node: Pessimist] 冷酷架构师正在审阅对方观点并展开防御性反击...")
 
-    # 从工厂实例化大模型
+    # 从工厂实例化大模型（pessimist 是 2 号 LLM，沿用 deepseek 作为"其他"）
     model = create_model(provider="deepseek", temperature=0.5)
 
     # 提取对方观点，展示共享状态的数据读取
@@ -141,7 +141,7 @@ def referee_node(state: DebateState):
     """
     print("\n⚖️ [Node: Referee] 客观裁判正在对双方辩证论点进行全面分析与统筹裁判...")
 
-    # 从工厂创建一个极其稳定的裁判模型 (temperature=0.0)
+    # 从工厂创建一个极其稳定的裁判模型（referee 是 3 号 LLM，沿用 deepseek 作为"其他"）
     model = create_model(provider="deepseek", temperature=0.0)
 
     # 同时读取共享状态中双方留下的文字，充分展示多 Agent 通信交互

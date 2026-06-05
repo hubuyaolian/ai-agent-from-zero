@@ -62,8 +62,8 @@ def initial_planner_node(state: ReplanningState):
         dict: 更新至状态的初始 plan 列表。
     """
     print("\n📋 [Node: Initial Planner] 正在为复杂目标任务建立初始执行计划...")
-    # 使用统一工厂函数创建 Qwen 聊天模型，温度设为 0.1
-    planner_model = create_model(provider="qwen", temperature=0.1)
+    # 教学阶段 04 之后默认 LLM 统一走 xiaomi mimo，温度设为 0.1
+    planner_model = create_model(provider="xiaomi mimo", temperature=0.1)
 
     # 初始规划 Prompt
     prompt = (
@@ -150,8 +150,8 @@ def adaptive_executor_node(state: ReplanningState):
             "系统无法获取任何关于企业落地 Python 微服务的真实商业细节数据，检索结果空空如也。"
         )
     else:
-        # 正常的步骤使用大模型计算成果
-        executor_model = create_model(provider="qwen", temperature=0.3)
+        # 正常的步骤使用大模型计算成果（executor 是 2 号 LLM，沿用 deepseek 作为"其他"）
+        executor_model = create_model(provider="deepseek", temperature=0.3)
 
         # 拼接前置轨迹
         history_list = []
@@ -196,8 +196,8 @@ def replanner_node(state: ReplanningState):
     """
     print("\n🔄 [Node: Replanner] 正在检查当前步骤的执行成果质量...")
 
-    # 初始化重规划大模型
-    replanning_model = create_model(provider="qwen", temperature=0.1)
+    # 初始化重规划大模型（replanner 是 3 号 LLM，沿用 deepseek 作为"其他"）
+    replanning_model = create_model(provider="deepseek", temperature=0.1)
 
     # 整理全部已经执行过的步骤（包括刚刚失败的这一步）作为上下文
     completed_steps_list = []
@@ -289,7 +289,8 @@ def summarizer_node(state: ReplanningState):
         dict: 更新 response 最终回答。
     """
     print("\n🎓 [Node: Summarizer] 所有子任务（包含代偿子任务）已顺利搞定。正在撰写终期自适应架构选型建议报告...")
-    summarizer_model = create_model(provider="qwen", temperature=0.2)
+    # summarizer 是 4 号 LLM，沿用 deepseek 作为"其他"
+    summarizer_model = create_model(provider="deepseek", temperature=0.2)
 
     # 串联所有步骤成果
     report_list = []

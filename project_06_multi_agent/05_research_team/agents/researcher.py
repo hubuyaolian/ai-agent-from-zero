@@ -110,9 +110,9 @@ def create_researcher_agent() -> BaseChatModel:
     输出返回值：
         BaseChatModel: 实例化后的 LangChain 兼容大模型。
     """
-    # 从工厂获取大模型，使用 deepseek 代替鉴权占位失效的 qwen。设置 temperature=0.3 减少创造性幻觉，强调事实一致性
+    # 从工厂获取大模型（教学阶段 04 之后默认 LLM 走 xiaomi mimo）。temperature=0.3 减少创造性幻觉，强调事实一致性
     model_instance = create_model(
-        provider="deepseek",
+        provider="xiaomi mimo",
         temperature=0.3
     )
     # 返回创建的模型实例

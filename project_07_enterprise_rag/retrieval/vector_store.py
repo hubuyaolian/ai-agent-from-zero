@@ -19,7 +19,7 @@ class VectorStoreManager:
         persist_directory: str | Path = CHROMA_DIR,
         *,
         collection_name: str = COLLECTION_NAME,
-        embedding_provider: str = "qwen",
+        embedding_provider: str = "deepseek",
         embedding_model: str = EMBEDDING_MODEL,
     ):
         self.persist_directory = Path(persist_directory)

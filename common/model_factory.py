@@ -36,9 +36,9 @@ def create_model(
     功能：根据提供商名称，自动选择正确的模型类和配置来创建实例。
     输入参数：
         provider (str): 模型提供商名称，默认 "deepseek"。
-                        可选值: "deepseek", "qwen", "glm", "kimi", "gemini"。
+                        可选值: "deepseek", "xiaomi mimo", "minimax", "gemini"。
         model_name (str): 模型名称，为 None 时使用该提供商的默认模型。
-                          例如: "deepseek-chat", "qwen-turbo", "glm-4-flash" 等。
+                          例如: "deepseek-chat", "mimo-v2.5" 等。
         temperature (float): 生成温度，控制输出的随机性，默认 0.7。
                              0.0 = 确定性输出，1.0 = 高随机性。
         **kwargs: 其他传递给模型构造函数的额外参数。

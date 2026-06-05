@@ -63,8 +63,8 @@ def researcher_node(state: PipelineState):
     """
     print("\n🔍 [Node: Researcher] 流水线开启！调研专家正在为主题搜集原始技术事实与材料...")
 
-    # 从工厂获取主力 DeepSeek 模型，提供 0.7 适度温度以释放内容生成的创造力和广度
-    model = create_model(provider="deepseek", temperature=0.7)
+    # 从工厂获取主力模型（教学阶段 04 之后默认 LLM 走 xiaomi mimo），0.7 温度释放内容生成的创造力和广度
+    model = create_model(provider="xiaomi mimo", temperature=0.7)
 
     # 构造调研提示词，要求提供详实的数据和原理解释
     researcher_prompt = (
@@ -100,7 +100,7 @@ def analyst_node(state: PipelineState):
     """
     print("\n📊 [Node: Analyst] 接力棒交接！分析专家正在对上游调研的原始材料实施深度提炼与价值萃取...")
 
-    # 从工厂实例化大模型，选择 0.3 较低温度以保障逻辑分析的严密与精确
+    # 从工厂实例化大模型（analyst 是 2 号 LLM，沿用 deepseek 作为"其他"），0.3 温度保障逻辑严密
     model = create_model(provider="deepseek", temperature=0.3)
 
     # 提取上游 Researcher 的成果，展示流水线中的状态消费
@@ -142,7 +142,7 @@ def writer_node(state: PipelineState):
     """
     print("\n✍️ [Node: Writer] 临门一脚！专栏作家正在将分析师的深度洞察改写为排版精美的 Markdown 报告...")
 
-    # 从工厂获取大模型，设置 0.5 适中温度以保证语言既自然生动又符合专业报告规范
+    # 从工厂获取大模型（writer 是 3 号 LLM，沿用 deepseek 作为"其他"），0.5 温度保证语言自然又专业
     model = create_model(provider="deepseek", temperature=0.5)
 
     # 提取上游 Analyst 提炼好的高含金量要点

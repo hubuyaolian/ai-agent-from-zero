@@ -72,7 +72,7 @@ def create_analyst_agent() -> BaseChatModel:
     输出返回值：
         BaseChatModel: 实例化后的 LangChain 兼容大模型。
     """
-    # 从工厂获取大模型，使用 deepseek 确保 API Key 可用。设置 temperature=0.5 取得严密推理与创造思考的完美平衡点
+    # 从工厂获取大模型（analyst 是 2 号 LLM，沿用 deepseek 作为"其他"）。temperature=0.5 取推理与创造平衡
     model_instance = create_model(
         provider="deepseek",
         temperature=0.5

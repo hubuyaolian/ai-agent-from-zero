@@ -67,17 +67,17 @@ def main():
 
     功能：执行 Embedding 向量化流程，并计算两组文本之间的余弦相似度。
     """
-    print("🔮 正在初始化通义千问 Embedding 模型...")
+    print("🔮 正在初始化 Embedding 模型...")
 
-    # 获取通义千问（qwen）的 API 配置参数
-    qwen_config = get_model_config("qwen")
+    # 教学阶段 04 之后统一以 xiaomi mimo 为默认 LLM；
+    # 本文件仅使用 embedding 服务，因此沿用 deepseek 作为兼容 OpenAI 格式的 embedding 提供方。
+    embedding_config = get_model_config("deepseek")
 
-    # 初始化 OpenAIEmbeddings，传入通义千问兼容接口配置
-    # 注意：我们这里使用通义千问的 text-embedding-v3 模型，它能稳定适配 OpenAIEmbeddings 包装器
+    # 初始化 OpenAIEmbeddings，使用 deepseek 的 OpenAI 兼容接口
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 通义千问推荐的最新 Embedding 模型
-        base_url=qwen_config["base_url"],  # 兼容 OpenAI 的 API 基地址
-        api_key=qwen_config["api_key"]  # 从配置中获取的 API Key
+        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
+        base_url=embedding_config["base_url"],  # 兼容 OpenAI 的 API 基地址
+        api_key=embedding_config["api_key"]  # 从配置中获取的 API Key
     )
 
     # 准备用于语义测试的文本列表

@@ -62,8 +62,8 @@ def planner_node(state: PlanExecuteState):
         dict: 更新到状态中的分步计划 plan 列表。
     """
     print("\n📋 [Node: Planner] 正在为复杂任务制定全局分步计划...")
-    # 从模型工厂中创建一个通义千问模型实例，温度设为 0.1 以保障计划的规律和稳定
-    planner_model = create_model(provider="qwen", temperature=0.1)
+    # 教学阶段 04 之后默认 LLM 统一走 xiaomi mimo，温度设为 0.1 以保障计划的规律和稳定
+    planner_model = create_model(provider="xiaomi mimo", temperature=0.1)
 
     # 编写专门的规划器 Prompt，要求必须输出标准的 JSON 对象
     planner_prompt = (
@@ -150,8 +150,8 @@ def executor_node(state: PlanExecuteState):
         f"[{current_idx + 1}/{total_steps}]: '{current_step_desc}'..."
     )
 
-    # 从工厂创建执行器模型实例
-    executor_model = create_model(provider="qwen", temperature=0.3)
+    # 从工厂创建执行器模型实例（executor 是 2 号 LLM，沿用 deepseek 作为"其他"）
+    executor_model = create_model(provider="deepseek", temperature=0.3)
 
     # 整理之前已执行完所有步骤的历史成果上下文（坚决不用单行推导式）
     history_context_list = []
@@ -208,8 +208,8 @@ def summarizer_node(state: PlanExecuteState):
         dict: 更新 response 最终答复字段。
     """
     print("\n🎓 [Node: Summarizer] 恭喜！所有步骤已顺利执行完毕。正在撰写终期汇总汇报报告...")
-    # 从工厂创建总结器大模型实例
-    summarizer_model = create_model(provider="qwen", temperature=0.2)
+    # 从工厂创建总结器大模型实例（summarizer 是 3 号 LLM，沿用 deepseek 作为"其他"）
+    summarizer_model = create_model(provider="deepseek", temperature=0.2)
 
     # 汇总所有的执行痕迹
     report_context_list = []

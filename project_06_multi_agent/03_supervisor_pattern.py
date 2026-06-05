@@ -74,8 +74,8 @@ def supervisor_node(state: MultiAgentState):
     # 打印提示，标志进入主管节点
     print("\n👨‍💼 [Node: Supervisor] 主管正在审阅任务状态并规划下一步分发...")
 
-    # 从公共工厂实例化 DeepSeek 决策模型，设置 0.0 温度确保极高的指令遵循稳定性
-    model = create_model(provider="deepseek", temperature=0.0)
+    # 从公共工厂实例化决策模型（教学阶段 04 之后默认 LLM 走 xiaomi mimo），0.0 温度确保指令遵循稳定性
+    model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 提取已完成的工作历史并拼接成可读字符串
     work_history_str = "\n".join(state["completed_work"])
@@ -180,7 +180,7 @@ def researcher_node(state: MultiAgentState):
     """
     print("\n🔍 [Node: Researcher] 调研专家正在搜集资料，开展技术深度拆解...")
 
-    # 从工厂实例化 DeepSeek 调研模型，设置较高随机性以丰富内容生成
+    # 从工厂实例化调研模型（researcher 是 2 号 LLM，沿用 deepseek 作为"其他"），0.7 温度丰富内容生成
     model = create_model(provider="deepseek", temperature=0.7)
 
     # 构建调研人设和任务指引 Prompt
@@ -222,7 +222,7 @@ def coder_node(state: MultiAgentState):
     """
     print("\n💻 [Node: Coder] 编码专家正在深入理解调研背景，开始编写完美的示例代码...")
 
-    # 从工厂实例化 DeepSeek 编码模型，温度设为 0.2 以防代码产生逻辑幻觉
+    # 从工厂实例化编码模型（coder 是 3 号 LLM，沿用 deepseek 作为"其他"），0.2 温度防代码逻辑幻觉
     model = create_model(provider="deepseek", temperature=0.2)
 
     # 提取前置调研结果，用于指导编码
@@ -271,7 +271,7 @@ def writer_node(state: MultiAgentState):
     """
     print("\n✍️ [Node: Writer] 写作润色专家正在收官，开始高度整合资料与代码，编排 Markdown 技术报告...")
 
-    # 从工厂实例化 DeepSeek 写作模型，设置 0.5 温度使其语言流畅度达到最高
+    # 从工厂实例化写作模型（writer 是 4 号 LLM，沿用 deepseek 作为"其他"），0.5 温度提升语言流畅度
     model = create_model(provider="deepseek", temperature=0.5)
 
     # 提取前置调研和编码数据，进行数据整合

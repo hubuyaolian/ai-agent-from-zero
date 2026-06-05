@@ -63,8 +63,8 @@ class SimpleAgent:
         self.name = name
         # 保存系统设定提示词
         self.system_prompt = system_prompt
-        # 实例化专属的大模型，使用 DeepSeek 作为推理引擎
-        self.llm = create_model(provider="deepseek", temperature=0.7)
+        # 实例化专属的大模型（教学阶段 04 之后默认 LLM 走 xiaomi mimo）
+        self.llm = create_model(provider="xiaomi mimo", temperature=0.7)
 
     def talk(self, input_text: str) -> str:
         """

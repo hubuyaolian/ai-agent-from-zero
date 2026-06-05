@@ -73,7 +73,7 @@ def create_writer_agent() -> BaseChatModel:
     输出返回值：
         BaseChatModel: 实例化后的 LangChain 兼容大模型。
     """
-    # 从工厂获取大模型，使用 deepseek 代替 qwen。设置 temperature=0.7 释放文笔流畅度和语言表现力
+    # 从工厂获取大模型（writer 是 3 号 LLM，沿用 deepseek 作为"其他"）。temperature=0.7 释放文笔流畅度
     model_instance = create_model(
         provider="deepseek",
         temperature=0.7

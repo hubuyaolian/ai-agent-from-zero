@@ -137,9 +137,9 @@ def main():
     else:
         pass
 
-    print("🧠 正在配置底层大模型（通义千问）并注入丰富工具集...")
-    # 使用项目公共模型工厂创建 Qwen 聊天大模型，温度设为 0.0 保障逻辑严密性
-    base_model = create_model(provider="qwen", temperature=0.0)
+    print("🧠 正在配置底层大模型（xiaomi mimo）并注入丰富工具集...")
+    # 教学阶段 04 之后默认 LLM 统一走 xiaomi mimo，温度设为 0.0 保障逻辑严密性
+    base_model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 包含 web_search, write_file, read_file 的多维工具组
     tool_list = [web_search, write_file, read_file]

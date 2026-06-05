@@ -92,8 +92,8 @@ def planner_node(state: SuperAgentState):
     """
     print("\n🗺️ [Node: Planner] 正在研判任务复杂度并制定全局路线图...")
 
-    # 从工厂获取主力 DeepSeek 模型，用于做严谨的任务拆解
-    model = create_model(provider="deepseek", temperature=0.0)
+    # 从工厂获取主力模型（教学阶段 04 之后默认走 xiaomi mimo），用于做严谨的任务拆解
+    model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 构造规划 Prompt
     planner_prompt = (
@@ -180,7 +180,7 @@ def react_agent_node(state: SuperAgentState):
     """
     print("\n💬 [Node: ReAct Agent] 正在对简单任务执行极速推理与回答...")
 
-    # 从工厂获取大模型实例
+    # 从工厂获取大模型实例（ReAct 是 2 号 LLM，沿用 deepseek 作为"其他"）
     model = create_model(provider="deepseek", temperature=0.7)
 
     # 构造简单生成提示
@@ -226,7 +226,7 @@ def executor_node(state: SuperAgentState):
     # 获取当前步骤的具体任务描述
     current_step_desc = steps[0].get("desc", "计算任务")
 
-    # 实例化高精度的分析模型
+    # 实例化高精度的分析模型（executor 是 3 号 LLM，沿用 deepseek 作为"其他"）
     model = create_model(provider="deepseek", temperature=0.0)
 
     # 构造执行计算的提示词
@@ -368,7 +368,7 @@ def reflector_node(state: SuperAgentState):
 
     print(f"\n🧐 [Node: Reflector] 正在对当前输出内容开展第 {updated_iter} 轮专家质检...")
 
-    # 从工厂获取严厉的评估模型
+    # 从工厂获取严厉的评估模型（reflector 是 4 号 LLM，沿用 deepseek 作为"其他"）
     evaluator_model = create_model(provider="deepseek", temperature=0.0)
 
     # 构造质检 Prompt

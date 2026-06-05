@@ -54,7 +54,7 @@ def get_model_config(provider):
 
     功能：从 MODEL_CONFIGS 字典中查找指定提供商的配置。
     输入参数：
-        provider (str): 模型提供商名称，如 "deepseek"、"qwen"、"glm"、"kimi"。
+        provider (str): 模型提供商名称，如 "deepseek"、"xiaomi mimo"、"minimax"。
     输出返回值：
         dict: 包含 base_url、api_key、default_model 的配置字典。
     异常：

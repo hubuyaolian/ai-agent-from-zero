@@ -75,7 +75,8 @@ def supervisor_agent(state: SafetyState):
     print("\n🔍 [Node: Supervisor] 正在评估用户请求的安全等级与具体意图...")
 
     # 从工厂实例化一个高确定性的 LLM (temperature=0.0) 展开意图提取
-    llm = create_model(provider="deepseek", temperature=0.0)
+    # 教学阶段 04 之后默认 LLM 走 xiaomi mimo
+    llm = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 构造强力结构化 Prompt，强制要求模型返回 JSON 数据
     system_prompt = (

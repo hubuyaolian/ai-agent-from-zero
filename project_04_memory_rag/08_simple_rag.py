@@ -145,13 +145,13 @@ def main():
 
     # 步骤 2：向量化并写入本地 ChromaDB 向量数据库
     print("\n🔮 正在配置 Embedding 并构建向量索引...")
-    # 获取通义千问（qwen）的 API 配置参数
-    qwen_config = get_model_config("qwen")
+    # embedding 作为第二个模型服务，沿用 deepseek 的 OpenAI 兼容接口
+    embedding_config = get_model_config("deepseek")
     # 创建 Embedding 模型对象
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",  # 通义千问 Embedding 实体
-        base_url=qwen_config["base_url"],
-        api_key=qwen_config["api_key"]
+        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
+        base_url=embedding_config["base_url"],
+        api_key=embedding_config["api_key"]
     )
     # 调用 Chroma 静态方法，一次性将文档块向量化并写入数据库中
     vectorstore = Chroma.from_documents(
@@ -168,8 +168,8 @@ def main():
     # search_kwargs={"k": 2} 表示在提问时，数据库只返回语义最接近的 2 条记录
     retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 
-    # 使用公共大模型工厂创建 qwen 聊天模型实例
-    model = create_model(provider="qwen", temperature=0.0)
+    # 使用公共大模型工厂创建聊天模型实例，默认走 xiaomi mimo
+    model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 编写专门的 RAG 专属 Prompt。
     # 核心要点：严格限制模型必须根据 Context 里的事实信息进行作答，拒绝无中生有的幻觉！

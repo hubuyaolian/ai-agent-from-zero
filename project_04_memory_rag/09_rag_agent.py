@@ -285,12 +285,12 @@ def main():
     splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=30)
     chunks = splitter.split_documents(documents)
 
-    # 配置通义千问 Embedding 模型
-    qwen_config = get_model_config("qwen")
+    # 配置 Embedding 模型（沿用 deepseek 的 OpenAI 兼容接口作为第二个模型服务）
+    embedding_config = get_model_config("deepseek")
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-v3",
-        base_url=qwen_config["base_url"],
-        api_key=qwen_config["api_key"]
+        model="text-embedding-v3",  # 占位：deepseek 暂未提供文本 embedding，可按需切到支持的服务
+        base_url=embedding_config["base_url"],
+        api_key=embedding_config["api_key"]
     )
     # 存入本地库
     vectorstore = Chroma.from_documents(
@@ -305,8 +305,8 @@ def main():
 
     # 2. 组装多功能 Agent
     print("--- [Agent 混合编排调试] 开始 ---")
-    # 创建底层大模型，使用统一的 create_model 工厂函数， provider="qwen"
-    base_model = create_model(provider="qwen", temperature=0.0)
+    # 创建底层大模型，使用统一的 create_model 工厂函数，默认走 xiaomi mimo
+    base_model = create_model(provider="xiaomi mimo", temperature=0.0)
 
     # 组合模型可调用的全部工具
     agent_tools = [search_knowledge_base, calculator]
