@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 # 配置 API Key（至少配置一个）
 cp .env.example .env
-# 编辑 .env，至少填一个：DEEPSEEK_API_KEY / QWEN_API_KEY / GLM_API_KEY / KIMI_API_KEY / GEMINI_API_KEY
+# 编辑 .env，至少填一个：DEEPSEEK_API_KEY / MIMO_API_KEY / MINIMAX_API_KEY / GEMINI_API_KEY
 ```
 
 ### 运行任意阶段代码
@@ -68,12 +68,12 @@ cd project_09_dev_team && pytest tests/ -v
 ```python
 from common.model_factory import create_model
 
-model = create_model("deepseek", temperature=0.7)  # 换 qwen / glm / kimi / gemini
+model = create_model("deepseek", temperature=0.7)  # 换 xiaomi mimo / minimax / gemini
 result = model.invoke("你好")
 ```
 
 **支持的 provider**（在 `common/config.py` 的 `MODEL_CONFIGS` 字典中维护）：
-- 国产模型走 `ChatOpenAI(base_url=...)` 兼容接口：`deepseek` / `qwen` / `glm` / `kimi` / `minimax` / `xiaomi mimo`
+- OpenAI 兼容接口（`ChatOpenAI(base_url=...)`）：`deepseek` / `xiaomi mimo` / `minimax`
 - Gemini 单独走 `ChatGoogleGenerativeAI`
 
 修改默认模型 / 新增 provider：编辑 `common/config.py` 中 `MODEL_CONFIGS` 字典。
