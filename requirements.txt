@@ -8,6 +8,9 @@
 # ----- LangChain 核心框架 -----
 langchain>=0.3.0
 langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-chroma>=0.1.0
+langchain-text-splitters>=0.3.0
 
 # ----- 模型接口 -----
 langchain-openai>=0.2.0             # OpenAI 兼容接口（国产模型通用）
@@ -21,6 +24,12 @@ python-dotenv>=1.0.0
 
 # ----- 向量数据库（阶段4 RAG 使用） -----
 chromadb>=0.5.0
+
+# ----- 企业级 RAG 教学项目 -----
+rank-bm25>=0.2.2
+jieba>=0.42.1
+pypdf>=4.0.0
+docx2txt>=0.8
 
 # ----- 数据校验 -----
 pydantic>=2.0.0

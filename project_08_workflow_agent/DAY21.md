@@ -4,9 +4,9 @@
 
 今天的课程将实现三个核心能力：
 
-1. **执行引擎**：用 LangGraph 编排"拆解 → 执行 → 校验 → 报告"的完整工作流，支持质量检查和自我纠错。
-2. **容错重试**：工具调用失败时的指数退避重试、降级替代、异常日志。
-3. **定时调度**：Cron 定时执行 + 事件触发，让 Agent 真正"无人值守"运行。
+1. **执行引擎**：用 LangGraph 编排"拆解 → 审批 → 执行 → 校验 → 报告"的完整工作流，支持 checkpoint、质量检查和可恢复执行。
+2. **容错重试**：工具调用失败时的错误分类、指数退避 + jitter、降级替代、异常日志。
+3. **定时调度**：本地教学版定时执行 + 事件触发；生产环境对接持久化调度器。
 
 ---
 
@@ -24,9 +24,9 @@
 
 ## 学习目标
 - 掌握 LangGraph 编排多步骤执行引擎的设计。
-- 理解指数退避重试、降级路由和异常日志的实现。
+- 理解 checkpoint、审批中断、指数退避重试、降级路由和异常日志的实现。
 - 实现日报/周报全自动生成流程。
-- 掌握 Cron 定时调度与事件触发的实现。
+- 掌握本地定时调度与事件触发的实现边界。
 - 构建完整的企业级业务流程自动化 CLI 应用。
 
 ---
@@ -49,9 +49,11 @@ class WorkflowState(TypedDict):
     execution_log: list                      # 执行日志
     retry_count: int                         # 全局重试计数
     status: str                              # 整体状态: planning/executing/validating/done/failed
+    pending_approvals: list                  # 待审批步骤
+    run_id: str                              # 本次执行 ID
 ```
 
-### 2. 4 节点执行图
+### 2. 5 节点执行图
 
 ```
 START
@@ -62,6 +64,16 @@ START
 └──────┬───────┘
        │
        ▼
+┌──────────────┐     有敏感步骤？
+│ approval_node│──────────────────────────► execute_node
+│ (审批/dry-run)│        审批通过或无敏感步骤
+└──────┬───────┘
+       │ 等待审批
+       ▼
+      END(可恢复)
+       ▲
+       │ 恢复执行
+       │
 ┌──────────────┐     步骤执行完成？
 │ execute_node │──────────────────────────► validate_node
 │ (逐步骤执行) │                              │
@@ -88,6 +100,8 @@ START
 
 ### 3. 各节点实现
 
+LangGraph 当前官方强调通过 checkpointer 保存每一步图状态，实现人类审批、记忆、time travel 和故障恢复。本课代码可以先给出顺序执行版本，但概念上必须保留 `run_id/thread_id`、checkpoint 和 resume 语义。
+
 #### plan_node — 任务拆解节点
 
 ```python
@@ -107,11 +121,37 @@ def plan_node(state: WorkflowState) -> dict:
     # 解析为 ExecutionPlan
     plan = parse_plan(plan_json.content)
 
+    # 计划必须先经过 PlanValidator，不能直接信任 LLM 输出。
+    validation_errors = plan_validator.validate(plan, registry)
+    if validation_errors:
+        return {"status": "failed", "error": validation_errors}
+
     return {
         "plan": plan,
         "current_step_index": 0,
         "step_results": [],
-        "status": "executing",
+        "status": "approval",
+    }
+```
+
+#### approval_node — 审批 / dry-run 节点
+
+```python
+def approval_node(state: WorkflowState) -> dict:
+    """敏感步骤进入审批或 dry-run，不直接执行。"""
+    sensitive_steps = [
+        step for step in state["plan"]["steps"]
+        if step.get("requires_approval", False)
+    ]
+    if not sensitive_steps:
+        return {"status": "executing"}
+
+    if state.get("auto_approve", False):
+        return {"status": "executing"}
+
+    return {
+        "status": "waiting_approval",
+        "pending_approvals": sensitive_steps,
     }
 ```
 
@@ -145,8 +185,16 @@ def execute_node(state: WorkflowState) -> dict:
     filled_args = fill_step_args(step, state["step_results"])
 
     try:
-        # 调用工具
-        result = tool.invoke(filled_args)
+        # 调用工具前检查权限、参数和幂等键。
+        ok, reason = registry.validate_args(step["tool_name"], filled_args)
+        if not ok:
+            raise ValueError(reason)
+        result = retry_handler.execute_with_fallback(
+            step["tool_name"],
+            filled_args,
+            registry,
+            idempotency_key=step.get("idempotency_key"),
+        )
         state["step_results"].append(result)
         state["execution_log"].append({
             "step": step["id"], "tool": step["tool_name"],
@@ -193,8 +241,9 @@ def validate_node(state: WorkflowState) -> dict:
             results=results_text,
         )
     )
-    score = parse_score(evaluation.content)
-    needs_replan = score < 6 and state["retry_count"] < MAX_RETRY
+    parsed = parse_validation_json(evaluation.content)
+    score = parsed["score"]
+    needs_replan = parsed["needs_replan"] and state["retry_count"] < MAX_RETRY
 
     if needs_replan:
         return {"status": "planning", "retry_count": state["retry_count"] + 1}
@@ -242,6 +291,22 @@ workflow.add_conditional_edges(
 )
 ```
 
+编译图时需要配置 checkpointer，并在运行时传入 thread_id：
+
+```python
+from langgraph.checkpoint.memory import MemorySaver
+
+memory = MemorySaver()
+graph = workflow.compile(checkpointer=memory)
+
+result = graph.invoke(
+    initial_state,
+    config={"configurable": {"thread_id": run_id}},
+)
+```
+
+生产中不要长期使用 `MemorySaver`，应换成数据库或平台托管 checkpointer；所有文件写入、通知、外部 API 调用都应做幂等处理，避免恢复时重复执行副作用。
+
 ---
 
 ## 第二部分：异常自主判断与容错重试
@@ -250,7 +315,7 @@ workflow.add_conditional_edges(
 
 | 异常类型 | 示例 | 处理策略 |
 |---------|------|---------|
-| 文件不存在 | 读取的 Excel 文件路径错误 | 检查路径 → 提示 LLM 修正参数 |
+| 文件不存在 | 读取的 CSV 文件路径错误 | 检查路径 → 提示 LLM 修正参数 |
 | 格式错误 | 期望数字但列中含文本 | 跳过无效行 → 继续处理有效数据 |
 | 权限不足 | 写入受保护目录 | 切换到可写目录 |
 | 网络超时 | 消息推送 API 超时 | 指数退避重试 |
@@ -260,6 +325,7 @@ workflow.add_conditional_edges(
 ### 2. RetryHandler — 指数退避重试
 
 ```python
+import random
 import time
 
 class RetryHandler:
@@ -270,23 +336,25 @@ class RetryHandler:
         self.base_delay = base_delay
         self.max_delay = max_delay
 
-    def execute_with_retry(self, tool, args: dict) -> str:
+    def execute_with_retry(self, tool, args: dict, *, retryable: bool = True) -> str:
         """带指数退避重试的工具调用。"""
         for attempt in range(self.max_retries + 1):
             try:
                 return tool.invoke(args)
             except Exception as e:
-                if attempt >= self.max_retries:
+                if not retryable or attempt >= self.max_retries:
                     return f"工具执行失败（已重试 {self.max_retries} 次）: {e}"
                 delay = min(
                     self.base_delay * (2 ** attempt),
                     self.max_delay
                 )
+                delay = delay + random.uniform(0, delay * 0.2)  # jitter，避免同时重试
                 time.sleep(delay)
         return "工具执行失败"
 
     def execute_with_fallback(self, tool_name: str, args: dict,
-                              registry: ToolRegistry) -> str:
+                              registry: ToolRegistry,
+                              idempotency_key: str = None) -> str:
         """带降级替代的工具调用。"""
         tool = registry.get(tool_name)
         if tool is None:
@@ -297,7 +365,9 @@ class RetryHandler:
                        fallback.invoke(args)
             return f"工具 '{tool_name}' 未注册且无替代方案"
 
-        result = self.execute_with_retry(tool, args)
+        meta = registry.get_meta(tool_name)
+        retryable = bool(meta and meta.idempotent)
+        result = self.execute_with_retry(tool, args, retryable=retryable)
         if "失败" in result:
             fallback = registry.get_fallback(tool_name)
             if fallback:
@@ -374,23 +444,19 @@ class ErrorLogger:
 
 Agent 执行链路:
 ┌─────────────────────────────────────────────────────────────┐
-│ Step 1: read_excel                                           │
-│   输入: data/sales/daily_sales_2024-01-15.xlsx              │
+│ Step 1: read_csv_summary                                     │
+│   输入: data/sales.csv                                       │
 │   输出: 读取到 256 行销售数据，列: 日期/产品/数量/金额/区域  │
 ├─────────────────────────────────────────────────────────────┤
-│ Step 2: calc_statistics                                      │
-│   输入: 同文件, 列="金额"                                    │
-│   输出: 总额 ¥1,256,800 / 均值 ¥4,909 / 最大 ¥28,500       │
+│ Step 2: calc_csv_statistics                                  │
+│   输入: 同文件                                               │
+│   输出: revenue 总额 ¥1,256,800 / units 总量 1,893          │
 ├─────────────────────────────────────────────────────────────┤
-│ Step 3: calc_statistics                                      │
-│   输入: 同文件, 列="数量"                                    │
-│   输出: 总量 1,893 件 / 均值 7.4 件 / 最大 120 件           │
+│ Step 3: generate_daily_report                                │
+│   输入: reports/daily_report.csv                             │
+│   输出: 写入汇总表 (count/sum/avg/min/max)                   │
 ├─────────────────────────────────────────────────────────────┤
-│ Step 4: write_excel                                          │
-│   输入: reports/日报_2024-01-15.xlsx                         │
-│   输出: 写入汇总表 (日期/总金额/总数量/均值/最大单笔)         │
-├─────────────────────────────────────────────────────────────┤
-│ Step 5: send_notification                                    │
+│ Step 4: send_notification                                    │
 │   输入: title="销售日报 2024-01-15"                          │
 │         content="今日销售总额 ¥1,256,800，共 1,893 件..."     │
 │   输出: ✅ 通知已通过企业微信发送                              │
@@ -415,33 +481,18 @@ class ReportGenerator:
         results = []
 
         # Step 1: 读取数据
-        read_tool = self.registry.get("read_excel")
+        read_tool = self.registry.get("read_csv_summary")
         data_summary = read_tool.invoke({"filepath": data_path})
         results.append(f"数据读取: {data_summary}")
 
-        # Step 2: 统计汇总（自动识别数值列）
-        stats_tool = self.registry.get("calc_statistics")
-        # 让 LLM 从数据摘要中识别需要统计的列
-        columns_prompt = f"从以下数据摘要中识别所有数值列名:\n{data_summary}\n只输出列名，逗号分隔。"
-        columns_resp = self.model.invoke(columns_prompt)
-        numeric_columns = [c.strip() for c in columns_resp.content.split(",")]
-
-        stats_results = []
-        for col in numeric_columns:
-            stat = stats_tool.invoke({"filepath": data_path, "column": col})
-            stats_results.append(stat)
-        results.append("统计完成: " + "; ".join(stats_results))
+        # Step 2: 统计汇总（自动扫描数值列）
+        stats_tool = self.registry.get("calc_csv_statistics")
+        stats_result = stats_tool.invoke({"filepath": data_path})
+        results.append("统计完成: " + stats_result)
 
         # Step 3: 写入报表
-        write_tool = self.registry.get("write_excel")
-        # 将统计结果转为表格数据
-        headers, rows = self._stats_to_table(stats_results)
-        write_result = write_tool.invoke({
-            "filepath": output_path,
-            "headers": headers,
-            "rows": rows,
-            "sheet_name": "汇总",
-        })
+        report_tool = self.registry.get("generate_daily_report")
+        write_result = report_tool.invoke({"data_path": data_path, "output_path": output_path})
         results.append(write_result)
 
         # Step 4: 推送通知
@@ -449,7 +500,7 @@ class ReportGenerator:
             notify_tool = self.registry.get("send_notification")
             notify_result = notify_tool.invoke({
                 "title": f"日报已生成: {os.path.basename(output_path)}",
-                "content": "\n".join(stats_results),
+                "content": stats_result,
             })
             results.append(notify_result)
 
@@ -464,10 +515,10 @@ class ReportGenerator:
 def generate_weekly_report(self, data_dir: str, output_path: str) -> str:
     """生成周报：合并 7 天数据 → 周度统计 → 环比计算 → 写入报表。"""
     # Step 1: 合并本周数据
-    merge_tool = self.registry.get("merge_excel")
+    merge_tool = self.registry.get("merge_csv")
     merge_result = merge_tool.invoke({
         "source_dir": data_dir,
-        "output_path": "data/temp_weekly.xlsx",
+        "output_path": "data/temp_weekly.csv",
     })
 
     # Step 2: 统计本周数据
@@ -509,6 +560,8 @@ def generate_weekly_report(self, data_dir: str, output_path: str) -> str:
 
 ### 2. TaskScheduler — 定时调度器
 
+下面的 `TaskScheduler` 是本地教学版：任务只存在于当前进程内，进程退出后不保留。它适合演示触发逻辑，不适合生产调度。
+
 ```python
 import schedule
 import threading
@@ -522,11 +575,11 @@ class TaskScheduler:
         self._running = False
 
     def add_cron_task(self, name: str, cron_expr: str, instruction: str):
-        """添加 Cron 定时任务。
+        """添加本地定时任务。
 
         Args:
             name: 任务名称。
-            cron_expr: Cron 表达式（简化版，仅支持 schedule 库格式）。
+            cron_expr: 简化表达式，仅支持 daily/weekly。
             instruction: 执行的指令。
         """
         # 解析简化的 cron 表达式
@@ -550,11 +603,6 @@ class TaskScheduler:
                 "sun": schedule.every().sunday,
             }
             job = day_map[day_name].at(time_str).do(
-                self._run_task, name=name, instruction=instruction
-            )
-        elif parts[0] == "monthly":
-            # 月度任务（简化处理）
-            job = schedule.every(30).days.do(
                 self._run_task, name=name, instruction=instruction
             )
         else:
@@ -674,8 +722,11 @@ class EventTrigger:
 任务执行:
   直接输入指令           让 Agent 自动拆解并执行
   /run <指令>           同上（显式触发）
-  /report daily         生成今日日报
-  /report weekly        生成本周周报
+  /run --approve <指令> 执行包含敏感工具的流程
+  /resume <run_id> --approve  审批后从 checkpoint 继续执行
+
+计划预览:
+  plan <指令>            只生成 ExecutionPlan，不执行工具
 
 任务调度:
   /schedule add <名称> <cron> <指令>   添加定时任务
@@ -689,6 +740,7 @@ class EventTrigger:
 执行历史:
   /history              查看最近执行记录
   /errors               查看今日异常日志
+  /checkpoints          查看等待恢复的本地 checkpoint
 
 系统:
   /quit                 退出应用
@@ -703,21 +755,25 @@ class EventTrigger:
 👤 用户 > 读取今天的销售数据，统计汇总，生成日报，推送给管理层
 
 📋 任务拆解中...
-  Step 1: read_excel(filepath="data/sales/daily_sales.xlsx")
-  Step 2: calc_statistics(filepath="data/sales/daily_sales.xlsx", column="金额")
-  Step 3: calc_statistics(filepath="data/sales/daily_sales.xlsx", column="数量")
-  Step 4: write_excel(filepath="reports/日报_2024-01-15.xlsx", ...)
-  Step 5: send_notification(title="销售日报 2024-01-15", ...)
+  Step 1: read_csv_summary(filepath="data/sales.csv")
+  Step 2: calc_csv_statistics(filepath="data/sales.csv")
+  Step 3: generate_daily_report(data_path="data/sales.csv", output_path="reports/daily_report.csv")
+  Step 4: send_notification(title="销售日报", ...)
 
 ⚙️ 执行中...
-  ✅ Step 1: read_excel — 读取 256 行数据
-  ✅ Step 2: calc_statistics — 金额统计: 总额 ¥1,256,800
-  ✅ Step 3: calc_statistics — 数量统计: 总量 1,893 件
-  ✅ Step 4: write_excel — 日报写入成功
-  ✅ Step 5: send_notification — 企业微信推送成功
+  ✅ Step 1: read_csv_summary — 读取 256 行数据
+  ✅ Step 2: calc_csv_statistics — revenue 总额 ¥1,256,800
+  ⏸ Step 3: generate_daily_report — 等待审批，已保存 checkpoint run_id=abc123
+  ⏭ Step 4: send_notification — 依赖未完成，暂不执行
+
+👤 用户 > /resume abc123 --approve
+
+⚙️ 从 checkpoint 继续执行...
+  ✅ Step 3: generate_daily_report — 日报写入成功
+  ✅ Step 4: send_notification — 本地通知写入成功
 
 🔍 校验结果: 8/10 — 目标已达成
-📋 执行报告: 5/5 步骤成功，耗时 25 秒
+📋 执行报告: 4/4 步骤成功，耗时 25 秒
 ```
 
 ### 3. 定时调度示例
@@ -736,19 +792,19 @@ class EventTrigger:
 ### 4. 异常处理示例
 
 ```
-👤 用户 > /run 读取 data/missing.xlsx 的数据
+👤 用户 > /run 读取 data/missing.csv 的数据
 
 📋 任务拆解中...
-  Step 1: read_excel(filepath="data/missing.xlsx")
+  Step 1: read_csv_summary(filepath="data/missing.csv")
 
 ⚙️ 执行中...
-  ❌ Step 1: read_excel — 文件不存在: data/missing.xlsx
+  ❌ Step 1: read_csv_summary — 文件不存在: data/missing.csv
   🔄 重试 1/3... (等待 1s)
-  ❌ Step 1: read_excel — 文件不存在: data/missing.xlsx
+  ❌ Step 1: read_csv_summary — 文件不存在: data/missing.csv
   🔄 重试 2/3... (等待 2s)
-  ❌ Step 1: read_excel — 文件不存在: data/missing.xlsx
+  ❌ Step 1: read_csv_summary — 文件不存在: data/missing.csv
   🔄 重试 3/3... (等待 4s)
-  ❌ Step 1: read_excel — 重试耗尽，尝试降级替代...
+  ❌ Step 1: read_csv_summary — 重试耗尽，尝试降级替代...
   ⚠️ 无降级替代工具
 
 🔍 校验结果: 2/10 — 目标未达成
@@ -787,36 +843,38 @@ class EventTrigger:
                                给服务恢复的时间窗口
 ```
 
-指数退避的直觉：**失败越多次，越应该"等一等再试"**。因为连续失败往往意味着系统暂时不可用（网络波动、服务过载），立即重试只会加重负担。
+指数退避的直觉：**失败越多次，越应该"等一等再试"**。因为连续失败往往意味着系统暂时不可用（网络波动、服务过载），立即重试只会加重负担。生产环境还要区分错误类型：超时、429、5xx 可以重试；权限不足、参数非法、文件不存在通常不应盲目重试。
 
-### Cron 表达式与 schedule 库的映射
+### Cron 表达式与调度库边界
 
-标准 Cron 表达式（5 字段）与 Python `schedule` 库的对应关系：
+标准 Cron 表达式（5 字段）与 Python 调度库的对应关系：
 
-| Cron | 含义 | schedule 写法 |
+| Cron | 含义 | 教学版写法 | 生产化替代 |
 |------|------|--------------|
-| `0 9 * * 1-5` | 工作日 9:00 | `schedule.every().monday.at("09:00")` 等 |
-| `0 17 * * 5` | 每周五 17:00 | `schedule.every().friday.at("17:00")` |
-| `0 0 1 * *` | 每月 1 号 | `schedule.every(30).days` (近似) |
-| `*/10 * * * *` | 每 10 分钟 | `schedule.every(10).minutes` |
+| `0 9 * * 1-5` | 工作日 9:00 | `schedule.every().monday.at("09:00")` 等 | APScheduler CronTrigger / Celery Beat |
+| `0 17 * * 5` | 每周五 17:00 | `schedule.every().friday.at("17:00")` | APScheduler / Celery Beat |
+| `0 0 1 * *` | 每月 1 号 | 不建议用 `every(30).days` 近似 | APScheduler CronTrigger |
+| `*/10 * * * *` | 每 10 分钟 | `schedule.every(10).minutes` | APScheduler / Prefect schedule |
 
-我们使用简化版 cron（`daily/weekly/monthly + 时间`），降低学习门槛，同时覆盖最常见的业务调度场景。
+我们使用简化版 cron（`daily/weekly + 时间`），降低学习门槛，同时覆盖最常见的本地演示场景。`schedule` 官方也明确它不适合需要持久化、精确时间、并发执行和工作日/节假日规则的任务。生产环境应使用持久化 job store、分布式锁、失败告警和调度审计。
 
 ### 企业级自动化的"三道防线"
 
 ```
 第一道防线: 工具层容错
 ├── 参数校验（执行前检查参数合法性）
-├── 指数退避重试（网络/超时类错误）
+├── 指数退避+jitter（网络/超时类错误）
 └── 降级替代（工具 A 失败 → 工具 B）
 
 第二道防线: 流程层校验
-├── 执行后校验（LLM 评估结果是否达标）
+├── 执行前审批（敏感工具 pending_approval）
+├── 执行后校验（结构化结果和产物是否达标）
 ├── 重新规划（校验不通过 → 重新拆解执行）
 └── 最大重试限制（防止无限循环）
 
 第三道防线: 调度层监控
 ├── 执行日志持久化（记录每次调用的参数/结果/耗时）
+├── checkpoint/resume（进程中断后从最近状态恢复）
 ├── 异常告警（连续失败 N 次后推送告警）
 └── 人工兜底（极端情况下暂停调度，等待人工介入）
 ```
@@ -825,13 +883,13 @@ class EventTrigger:
 
 ## 课后练习
 
-1. **日报自动化实战**：准备一份模拟的 Excel 销售数据，运行日报生成流程，验证从数据读取到推送通知的完整链路。
+1. **日报自动化实战**：准备一份模拟的 CSV 销售数据，运行日报生成流程，验证从数据读取到推送通知的完整链路。
 
 2. **容错机制测试**：故意设置错误的文件路径（不存在的文件），观察 RetryHandler 的指数退避重试行为和最终降级处理。
 
 3. **定时调度实验**：注册一个"每分钟执行一次"的定时任务（输出当前时间），观察 5 分钟内的调度执行情况。
 
-4. **降级替代设计**：为 `read_excel` 工具注册一个降级替代（如 `read_csv`），当 Excel 文件读取失败时自动切换到 CSV 格式。
+4. **降级替代设计**：为 `read_csv_summary` 工具注册一个降级替代（如读取最近一次缓存摘要），当原始 CSV 文件读取失败时自动切换。
 
 5. **事件触发实验**：配置目录监控，当新文件放入目录时自动触发数据处理流程。手动创建一个测试文件验证触发效果。
 

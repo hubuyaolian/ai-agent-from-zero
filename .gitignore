@@ -27,3 +27,7 @@ Thumbs.db
 # ===== 向量数据库本地存储 =====
 chroma_db/
 *.sqlite3
+
+# ===== 毕业项目运行时产物 =====
+project_07_enterprise_rag/runtime_data/
+project_08_workflow_agent/data/output/

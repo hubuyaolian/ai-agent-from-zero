@@ -34,25 +34,10 @@ MODEL_CONFIGS = {
         "api_key": os.getenv("DEEPSEEK_API_KEY", ""),  # 从环境变量读取 Key
         "default_model": "deepseek-v4-flash",  # 默认模型：DeepSeek-V3
     },
-    "qwen": {
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",  # 阿里云兼容接口
-        "api_key": os.getenv("QWEN_API_KEY", ""),  # 从环境变量读取 Key
-        "default_model": "qwen-plus",  # 默认模型：通义千问 Plus
-    },
-    "glm": {
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",  # 智谱 AI 接口
-        "api_key": os.getenv("GLM_API_KEY", ""),  # 从环境变量读取 Key
-        "default_model": "glm-4-flash",  # 默认模型：GLM-4-Flash（免费）
-    },
-    "kimi": {
-        "base_url": "https://api.moonshot.cn/v1",  # Moonshot AI 接口
-        "api_key": os.getenv("KIMI_API_KEY", ""),  # 从环境变量读取 Key
-        "default_model": "moonshot-v1-8k",  # 默认模型：Kimi 8K 上下文
-    },
     "minimax": {
         "base_url": "https://api.minimaxi.com/v1",  # 火山方舟 OpenAI 兼容接口
         "api_key": os.getenv("MINIMAX_API_KEY", ""),  # 从环境变量读取 Key
-        "default_model": "MiniMax-M2.7",  # 默认模型：方舟 Coding Plan
+        "default_model": "MiniMax-M3",  # 默认模型：方舟-M3.1
     },
 }
 

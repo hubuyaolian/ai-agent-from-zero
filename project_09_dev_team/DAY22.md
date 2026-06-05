@@ -10,6 +10,8 @@
 
 **多智能体协同**正是为解决这些问题而生的。每个 Agent 扮演一个专业角色，拥有独立的 System Prompt 和工具集，通过消息传递协同完成复杂任务。
 
+> 技术状态说明（2026）：多 Agent 开发团队并不落后，LangGraph、OpenAI Agents SDK、AutoGen、CrewAI 都仍在围绕 subagents、handoffs、teams、flows 等模式演进。但当前最佳实践已经从“让多个 Agent 全自动写完项目”转向“代码编排 + 专家 Agent + 结构化产物 + 沙箱执行 + 人工审批 + 可观测评估”。因此本课不能承诺无边界全自动交付生产代码，而应把目标设为**受控的本地开发闭环**。
+
 ---
 
 ## 目录
@@ -28,6 +30,7 @@
 - 掌握多 Agent 消息队列、任务下发、结果回传机制。
 - 理解 LangGraph 中多 Agent 编排的两种模式：线性流水线 vs. 主管调度。
 - 实现规划 Agent 的需求结构化拆解能力。
+- 理解角色隔离、工具最小权限、产物 schema 校验和安全工作区的重要性。
 
 ---
 
@@ -246,18 +249,19 @@ DOCWRITER_SYSTEM_PROMPT = """你是一位专业的技术文档工程师。
 
 | 角色 | 工具集 | 说明 |
 |------|--------|------|
-| 规划 Agent | `list_files`, `read_file`, `write_file` | 只读代码 + 输出架构文档 |
-| 开发 Agent | `read_file`, `write_file`, `create_file` | 读写代码 |
-| 测试 Agent | `read_file`, `execute_python` | 只读代码 + 执行测试 |
-| 文档 Agent | `read_file`, `write_file`, `create_file` | 读代码 + 写文档 |
+| 规划 Agent | `list_files`, `read_file`, `emit_plan` | 只读代码 + 输出结构化计划 |
+| 开发 Agent | `read_file`, `emit_artifact` | 不能直接写磁盘，只能提交代码产物 |
+| 测试 Agent | `read_file`, `run_tests` | 只读代码 + 在沙箱工作区运行白名单测试 |
+| 文档 Agent | `read_file`, `emit_artifact` | 读代码 + 提交文档产物 |
+| 交付节点 | `safe_write_artifacts` | 唯一允许落盘的节点，负责路径校验和覆盖策略 |
 
 ```python
 # 工具配置示例
 AGENT_TOOLS = {
-    "planner": [list_files, read_file, write_file],
-    "developer": [read_file, write_file, create_file],
-    "tester": [read_file, execute_python],
-    "docwriter": [read_file, write_file, create_file],
+    "planner": [list_files, read_file, emit_plan],
+    "developer": [read_file, emit_artifact],
+    "tester": [read_file, run_tests],
+    "docwriter": [read_file, emit_artifact],
 }
 
 def create_agent(role: str, model) -> Runnable:
@@ -277,6 +281,8 @@ def create_agent(role: str, model) -> Runnable:
         prompt=prompts[role],
     )
 ```
+
+这个变化很关键：Agent 不直接写任意文件，也不直接执行任意命令。Planner、Developer、DocWriter 只产出结构化对象；真正写入磁盘由交付节点统一做路径校验、文件覆盖判断和审计。Tester 只能在项目输出目录下执行白名单测试命令，不能获得通用 shell。
 
 ---
 
@@ -327,11 +333,14 @@ from datetime import datetime
 @dataclass
 class AgentMessage:
     """Agent 间传递的消息。"""
+    message_id: str                       # 消息 ID
+    correlation_id: str                   # 同一项目/任务的关联 ID
     sender: str                          # 发送方 Agent 角色
     receiver: str                        # 接收方 Agent 角色
     msg_type: str                        # 消息类型: task / result / bug / feedback
     content: str                         # 消息正文
     attachments: dict = field(default_factory=dict)  # 附带数据（代码/文件路径等）
+    priority: str = "normal"             # high / normal / low
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
 
@@ -370,6 +379,7 @@ class MessageBus:
     def send(self, message: AgentMessage):
         """发送消息。"""
         self._queue.append(message)
+        self._queue.sort(key=lambda m: {"high": 0, "normal": 1, "low": 2}.get(m.priority, 1))
         self._history.append(message)
 
     def receive(self, receiver: str) -> list[AgentMessage]:
@@ -388,6 +398,8 @@ class MessageBus:
         for role in ["planner", "developer", "tester", "docwriter"]:
             if role != sender:
                 self.send(AgentMessage(
+                    message_id=f"{sender}-{role}-{len(self._history) + 1}",
+                    correlation_id="project-run",
                     sender=sender,
                     receiver=role,
                     msg_type=msg_type,

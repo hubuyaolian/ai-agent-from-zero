@@ -1,13 +1,15 @@
-# Day 23 课程：多智能体协同开发助手 — 工作流编排与自动交付 🔧
+# Day 23 课程：多智能体协同开发助手 — 工作流编排与受控交付 🔧
 
-在 Day 22 中，我们完成了多智能体系统的两大基础：**四角色智能体架构**（规划/开发/测试/文档）和**消息通信机制**（MessageBus + 任务分配）。今天我们将这些组件组装为一台完整的"软件开发流水线"——用 LangGraph 编排一个包含反馈循环的多 Agent 工作流，实现从需求输入到项目交付的全自动闭环。
+在 Day 22 中，我们完成了多智能体系统的两大基础：**四角色智能体架构**（规划/开发/测试/文档）和**消息通信机制**（MessageBus + 任务分配）。今天我们将这些组件组装为一台完整的"软件开发流水线"——用 LangGraph 思想编排一个包含反馈循环的多 Agent 工作流，实现从需求输入到项目交付的受控闭环。
+
+> 技术状态说明（2026）：LangGraph 的 multi-agent、自定义 workflow 和 supervisor/subagents 模式仍然是主流路线之一；OpenAI Agents SDK 也明确支持 agents-as-tools、handoffs、guardrails、sessions 与 tracing；AutoGen 和 CrewAI 也在继续维护 teams/flows。课程路线不落后，但“全自动开发并交付”必须加边界：结构化输出、路径白名单、测试沙箱、最大修复轮次、人工审批和交付前质量门禁。
 
 ---
 
 ## 目录
 1. [学习目标](#学习目标)
 2. [第一部分：LangGraph 多 Agent 工作流编排](#第一部分langgraph-多-agent-工作流编排)
-3. [第二部分：代码全自动开发与自检](#第二部分代码全自动开发与自检)
+3. [第二部分：代码受控生成与自检](#第二部分代码受控生成与自检)
 4. [第三部分：项目自动化交付闭环](#第三部分项目自动化交付闭环)
 5. [核心原理深度解析](#核心原理深度解析)
 6. [课后练习](#课后练习)
@@ -18,7 +20,7 @@
 - 掌握 LangGraph 编排多 Agent 工作流的设计（含反馈循环）。
 - 理解"写代码 → 查代码 → 改代码"的自检闭环机制。
 - 掌握 DevTeamState 的状态管理与流转。
-- 实现从需求输入到项目交付的全自动闭环。
+- 实现从需求输入到项目交付的受控闭环。
 - 构建完整的多智能体协同开发 CLI 应用。
 
 ---
@@ -39,10 +41,13 @@ class DevTeamState(TypedDict):
     task_queue: list                         # 待执行的任务队列
     current_task: dict                       # 当前正在执行的任务
     code_artifacts: dict                     # 代码产物 {文件路径: 内容}
+    artifact_manifest: list                  # 结构化产物清单
     test_report: dict                        # 测试报告
     bug_list: list                           # 测试发现的 Bug 列表
     fix_count: int                           # 修复轮次计数
     doc_artifacts: dict                      # 文档产物 {文件路径: 内容}
+    approval_required: bool                  # 是否需要人工审批
+    quality_gate: dict                       # 交付质量门禁结果
     stage: str                               # 当前阶段: planning/developing/testing/fixing/documenting/done
     message_bus: list                        # Agent 间消息记录
 ```
@@ -318,31 +323,34 @@ def docwriter_node(state: DevTeamState) -> dict:
 ```python
 def deliver_node(state: DevTeamState) -> dict:
     """交付节点：汇总所有产物，生成项目报告。"""
-    # 将代码和文档写入磁盘
-    project_dir = os.path.join("data", "output", sanitize_project_name(state["requirement"]))
-    os.makedirs(project_dir, exist_ok=True)
+    gate = evaluate_quality_gate(state)
+    if not gate["passed"]:
+        return {
+            "approval_required": True,
+            "quality_gate": gate,
+            "messages": [AIMessage(content="质量门禁未通过，等待人工确认或重新修复。")],
+        }
+
+    project_dir = safe_project_dir(state["requirement"])
 
     # 写入代码文件
     for filepath, content in state["code_artifacts"].items():
-        full_path = os.path.join(project_dir, filepath)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(content)
+        safe_write_artifact(project_dir, filepath, content)
 
     # 写入文档文件
     for filepath, content in state["doc_artifacts"].items():
-        full_path = os.path.join(project_dir, filepath)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(content)
+        safe_write_artifact(project_dir, filepath, content)
 
     # 生成项目报告
     report = generate_delivery_report(state)
 
     return {
+        "quality_gate": gate,
         "messages": [AIMessage(content=report)],
     }
 ```
+
+`evaluate_quality_gate` 至少应检查：是否存在 CRITICAL/HIGH 问题、测试命令是否通过、文件路径是否合法、是否有 README、是否超过最大修复轮次。`safe_write_artifact` 必须在安全工作区内解析路径，禁止目录穿越和绝对路径。
 
 ### 5. 图的编译
 
@@ -393,7 +401,7 @@ def build_dev_team_workflow():
 
 ---
 
-## 第二部分：代码全自动开发与自检
+## 第二部分：代码受控生成与自检
 
 ### 1. "写 → 查 → 改" 自检闭环
 
@@ -466,7 +474,7 @@ BUG_REPORT_FORMAT = """
 
 ### 4. 代码产物的解析与持久化
 
-开发 Agent 的输出需要被解析为结构化的文件列表：
+开发 Agent 的输出必须被解析为结构化的文件列表。不要依赖自由文本中的任意路径，也不要直接把模型输出写入磁盘。
 
 ```
 开发 Agent 的原始输出:
@@ -498,18 +506,27 @@ def load_tasks(filepath: str) -> list:
 
 ```python
 def parse_code_response(response_text: str) -> dict:
-    """解析开发 Agent 的输出为文件字典。"""
+    """解析开发 Agent 的结构化代码产物。
+
+    推荐让模型输出 JSON:
+    {
+      "files": [
+        {"path": "todo_app/models.py", "content": "...", "type": "code"}
+      ]
+    }
+    """
+    payload = json.loads(response_text)
     artifacts = {}
-    # 按文件标记分割
-    pattern = r"(?:# |// )文件[:：]\s*(\S+)\n(.*?)(?=(?:# |// )文件[:：]|$)"
-    matches = re.findall(pattern, response_text, re.DOTALL)
-    for filepath, content in matches:
-        # 去除 markdown 代码块标记
-        content = re.sub(r"^```python\n?", "", content)
-        content = re.sub(r"\n?```$", "", content)
-        artifacts[filepath] = content.strip()
+    for item in payload.get("files", []):
+        path = validate_artifact_path(item["path"])
+        content = item.get("content", "")
+        if not content.strip():
+            raise ValueError(f"空文件内容: {path}")
+        artifacts[path] = content
     return artifacts
 ```
+
+`validate_artifact_path` 至少要做三件事：禁止绝对路径、禁止 `..` 目录穿越、只允许写入本项目的输出工作区。这样即使模型输出了 `/etc/passwd` 或 `../../secrets.env`，交付节点也会拒绝。
 
 ---
 
@@ -578,7 +595,7 @@ def parse_code_response(response_text: str) -> dict:
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
-                    🎉 项目交付完成
+                    ✅ 项目待确认/已交付
 ```
 
 ### 2. 交付报告示例

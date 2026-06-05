@@ -169,13 +169,15 @@ class ChatHistory:
         """
         清空对话历史。
 
-        功能：删除所有消息记录，重新开始。
-              注意：如果有 SystemMessage，也会一起被清除。
+        功能：删除用户与 AI 的对话记录，保留 SystemMessage 角色设定。
         输入参数：无。
         输出返回值：无。
         """
-        # 清空消息列表
-        self.messages = []
+        # 只清空对话内容，保留系统角色设定
+        self.messages = [
+            msg for msg in self.messages
+            if isinstance(msg, SystemMessage)
+        ]
 
     def get_message_count(self):
         """
