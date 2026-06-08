@@ -11,6 +11,15 @@ Day 10 演示：最简 RAG (检索增强生成) 管道的端到端实现。
 import os
 # 导入文件系统删除工具，用于重置测试目录
 import shutil
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
+
+# 将项目根目录加入模块搜索路径，保证 `python project_04_memory_rag/08_simple_rag.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 的 Chroma 适配器
 from langchain_chroma import Chroma
 # 导入本地 Embedding 包装器（底层依赖 sentence-transformers）

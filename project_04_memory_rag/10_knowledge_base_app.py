@@ -12,6 +12,15 @@ Day 10 综合实战项目：命令行个人知识库问答系统 (CLI Knowledge 
 import os
 # 导入文件系统删除模块
 import shutil
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
+
+# 将项目根目录加入模块搜索路径，保证 `python project_04_memory_rag/10_knowledge_base_app.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 基础消息类
 from langchain_core.messages import HumanMessage, AIMessage
 # 导入 Chroma 向量存储类
