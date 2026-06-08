@@ -35,7 +35,7 @@
 Embedding 是一种将非结构化数据（文本、图片、音频等）转化为固定长度的**数值向量**的技术。
 
 ```
-"今天北京天气很好"  →  [0.12, -0.34, 0.56, ..., 0.78]   # 1536 维向量
+"今天北京天气很好"  →  [0.12, -0.34, 0.56, ..., 0.78]   # 512 维向量
 "北京今日天气晴朗"  →  [0.11, -0.33, 0.55, ..., 0.77]   # 语义相似 → 向量接近
 "量子力学的基本原理"  →  [0.89, 0.12, -0.67, ..., 0.03]   # 语义不同 → 向量远离
 ```
@@ -61,6 +61,7 @@ cos(θ) = ─────────────────
 
 | 模型 | 提供商 | 向量维度 | 特点 |
 |------|-------|---------|------|
+| `BAAI/bge-small-zh-v1.5` | BAAI（开源本地） | 512 | ⭐ 本课程默认，中文专用、免费、无需 API Key |
 | `text-embedding-3-small` | OpenAI | 1536 | 性价比高 |
 | `text-embedding-v3` | 阿里云（通义） | 1024 | 中文效果好 |
 | `embedding-3` | 智谱 | 2048 | 国产可选 |
@@ -69,31 +70,30 @@ cos(θ) = ─────────────────
 在 LangChain 中调用 Embedding 模型：
 
 ```python
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
-# 使用 DeepSeek / Qwen 等兼容 OpenAI 接口的 Embedding
-embeddings = OpenAIEmbeddings(
-    model="text-embedding-v3",
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-    api_key="your_api_key"
+# 使用本地 sentence-transformers 模型（无需 API Key，首次运行自动下载）
+# 默认模型：BAAI/bge-small-zh-v1.5，中文专用、~93M 参数
+embeddings = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-small-zh-v1.5",
+    model_kwargs={"device": "cpu"},  # 无 GPU 环境走 CPU；有 GPU 可改 "cuda"
+    encode_kwargs={"normalize_embeddings": True},  # 归一化后余弦相似度等价于点积
 )
 
 # 将单条文本向量化
 vector = embeddings.embed_query("今天天气真好")
-print(f"向量维度: {len(vector)}")  # 1024
+print(f"向量维度: {len(vector)}")  # 512
 print(f"前 5 维: {vector[:5]}")     # [0.12, -0.34, ...]
 ```
 
-> [!WARNING]
-> ### ⚠️ 国产 Embedding 模型 API 的兼容性警告
+> [!NOTE]
+> ### 💡 为什么本课程选择本地 Embedding 模型？
 > 很多国产大模型云厂商（如阿里云通义千问、智谱清言、Kimi 等）虽然宣称提供“OpenAI 兼容接口”，但它们的 **Embedding API 在内部请求参数和返回数据层级上可能与 OpenAI 存在细微差别**。
 > 例如，某些厂商对于 `text-embedding-3-small` 这类 OpenAI 特有参数会直接报错；又或者在 LangChain 的 `OpenAIEmbeddings` 调用中，智谱等特定接口可能会由于接口包装层解析不到 `data[0].embedding` 路径而抛出 `KeyError`。
 >
-> **💡 国产模型 Embedding 兼容性最佳实践**：
-> 1. **优先推荐通义千问**：通义千问的 `text-embedding-v3` 接口在 compatible-mode（兼容模式）下的 API 返回结构与 OpenAI 几乎 100% 对齐，调用最稳定，且非常适合中文语义处理。
-> 2. **选用厂商原生适配器**：如果遇到 `OpenAIEmbeddings` 报 `KeyError` 或参数不识别等兼容性错误，**绝不要勉强通过修改 base_url 去套用 OpenAIEmbeddings**。应该优先使用该厂商在 LangChain 中的原生生态包。例如，对于智谱 AI，建议安装 `langchain-zhipu` 并使用 `ZhipuAIEmbeddings` 代替 `OpenAIEmbeddings`。
-> 3. **调试与重试思路**：遇到问题时，可以使用 python 的 `requests` 库手动 POST 厂商的 Embedding 实体接口，查看其响应体的 JSON 树状层级，确认其返回结构中是 `embedding` 还是 `embeddings`，以及外层包装是否为 `data`，以便定制化解决。
+> 为了彻底避免这类问题，本课程统一使用 **本地开源 Embedding 模型** `BAAI/bge-small-zh-v1.5`，它通过 `sentence-transformers` 库在本机 CPU 上运行，**完全不依赖任何外部 API Key**，零成本、零配置。
 
+```python
 # 批量向量化
 vectors = embeddings.embed_documents([
     "今天天气真好",

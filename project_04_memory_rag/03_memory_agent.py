@@ -62,7 +62,7 @@ class MemoryAgent:
         # 实例化 SQLite 长期记忆管理器
         self.store = MemoryStore()
         # 实例化底层大模型，使用稍微带有创造力的 temperature
-        self.model = create_model("deepseek", temperature=0.7)
+        self.model = create_model("xiaomi mimo", temperature=0.7)
         # 初始化短期会话历史消息队列
         self.short_term_history = []
 

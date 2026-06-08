@@ -241,7 +241,7 @@ def extract_and_save_memories(user_id: str, conversation_text: str, store: Memor
         store: SQLite 长期记忆持久化存储管理器实例。
     """
     # 实例化大模型
-    model = create_model("deepseek", temperature=0.0)
+    model = create_model("xiaomi mimo", temperature=0.0)
 
     # 记忆提取的提示词模版
     prompt = ChatPromptTemplate.from_template(

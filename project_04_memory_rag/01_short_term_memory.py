@@ -46,7 +46,7 @@ class ShortTermChatSession:
         # 初始化用于缓存消息列表的内存数组
         self.messages = []
         # 创建默认大模型实例
-        self.model = create_model("deepseek", temperature=0.7)
+        self.model = create_model("xiaomi mimo", temperature=0.7)
 
     def chat(self, user_input: str):
         """
