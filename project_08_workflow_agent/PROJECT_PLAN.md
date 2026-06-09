@@ -14,6 +14,7 @@
 - 掌握 ToolRegistry 的工具元数据、权限、schema、审批和审计设计。
 - 掌握结构化 ExecutionPlan、依赖拓扑排序和参数模板填充。
 - 掌握执行引擎中的重试、降级、幂等和执行报告。
+- 理解 MCP 与 ToolRegistry 的职责差异，以及 ADK、PydanticAI、OpenAI Agents SDK 等框架的工程取舍。
 - 理解本地调度与生产级工作流编排的边界。
 
 ### 2.2 工程目标
@@ -53,7 +54,7 @@
 |------|------------|------------|
 | 编排 | Python 顺序执行引擎，结构映射 LangGraph 节点 | LangGraph + 持久化 checkpointer / Temporal |
 | 规划 | 规则 planner + 可选 LLM | 结构化输出、plan validation、人工审核 |
-| 工具 | Python 函数 + registry | 服务化工具、权限网关、审计平台 |
+| 工具 | Python 函数 + registry | MCP Server、服务化工具、权限网关、审计平台 |
 | 表格 | CSV 标准库，Excel 可选 openpyxl | 数据仓库、BI、ETL 管道 |
 | 重试 | 指数退避 + jitter | Prefect/Celery/Temporal task retry |
 | 调度 | 本地简化 daily/weekly | APScheduler/Celery Beat/Prefect/Temporal |
@@ -145,9 +146,13 @@ flowchart TD
 4. 把工具执行下沉到任务队列或 worker。
 5. 增加数据库型 schedule store 和分布式锁。
 6. 为每个工具增加 Pydantic schema 和单元测试。
+7. 将高复用工具封装为 MCP Server，但继续由 ToolRegistry 负责权限、审批、限流和审计。
+8. 评估 Google ADK、PydanticAI、OpenAI Agents SDK 等框架在结构化输出、观测和部署上的收益。
 
 ## 10. 当前技术判断
 
 - LangGraph 工作流路线没有过时，但课程必须补 checkpoint、resume、审批、幂等和可观测性。
 - `schedule` 库适合本地教学，不适合生产持久化调度。
 - 当前生产工作流生态更强调 durable execution、task-level retries、trace 和 guardrails。
+- MCP 正在成为 Agent 连接外部工具和上下文的重要标准，但不能替代本项目的工具治理层。
+- 新 Agent 框架的核心价值不是“更自动”，而是让 schema、trace、eval、sandbox 和 deployment 更工程化。

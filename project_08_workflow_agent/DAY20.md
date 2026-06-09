@@ -6,7 +6,7 @@
 
 今天的课程将从一个全新的视角重新审视工具调用——从"对话中的工具"升级为"企业级工具注册中心"，从"单次 ReAct 循环"升级为"多步骤复杂流程的可审计执行链"。
 
-> 技术状态说明（2026）：LangGraph 仍是长时间、有状态 Agent 工作流的主流编排选择之一，不落后。但企业自动化不能只靠内存状态和简单重试。当前最佳实践强调 durable execution、checkpoint、trace、幂等副作用、审批中断、结构化计划校验和可恢复任务。Python `schedule` 库只适合本地教学和简单定时任务，生产调度应评估 APScheduler、Celery Beat、Prefect、Temporal 等方案。
+> 技术状态说明（2026）：LangGraph 仍是长时间、有状态 Agent 工作流的主流编排选择之一，不落后。但企业自动化不能只靠内存状态和简单重试。当前最佳实践强调 durable execution、checkpoint、trace、幂等副作用、审批中断、结构化计划校验和可恢复任务。Python `schedule` 库只适合本地教学和简单定时任务，生产调度应评估 APScheduler、Celery Beat、Prefect、Temporal 等方案。工具接入层也在协议化：MCP 已成为 Agent 连接外部工具和数据源的重要标准；Google ADK、PydanticAI、OpenAI Agents SDK 等框架则把工具、结构化输出、追踪和部署能力进一步产品化。
 
 ---
 
@@ -15,8 +15,9 @@
 2. [第一部分：从交互式 Agent 到自动化流程 Agent](#第一部分从交互式-agent-到自动化流程-agent)
 3. [第二部分：统一工具注册机制](#第二部分统一工具注册机制)
 4. [第三部分：智能任务拆解与规划](#第三部分智能任务拆解与规划)
-5. [核心原理深度解析](#核心原理深度解析)
-6. [课后练习](#课后练习)
+5. [第四部分：2026 前沿扩展：MCP 与 Agent 框架生态](#第四部分2026-前沿扩展mcp-与-agent-框架生态)
+6. [核心原理深度解析](#核心原理深度解析)
+7. [课后练习](#课后练习)
 
 ---
 
@@ -26,6 +27,7 @@
 - 掌握 LLM 驱动的任务拆解：将复杂指令分解为可执行子任务链。
 - 理解执行计划（ExecutionPlan）的数据结构与流转机制。
 - 实现文件处理、CSV 读取统计、报表生成、消息推送等核心工具；Excel 读写作为可选扩展，不作为两日项目的硬依赖。
+- 理解 MCP 与 ToolRegistry 的职责差异，以及 ADK、PydanticAI 等新框架和本项目的关系。
 
 ---
 
@@ -657,6 +659,78 @@ def fill_step_args(step: Step, completed_steps: dict) -> dict:
             filled[key] = value
     return filled
 ```
+
+---
+
+## 第四部分：2026 前沿扩展：MCP 与 Agent 框架生态
+
+本项目的 `ToolRegistry` 是一个本地教学版工具治理中心：注册工具、声明参数、标记敏感操作、控制角色、记录调用日志。到了生产系统，工具不一定都写在同一个 Python 进程里，可能分布在内部 API、SaaS、数据库、文件系统、消息平台和工作流平台中。这时需要把“工具接入协议”和“工具治理策略”分开看。
+
+### 1. MCP 与 ToolRegistry 的区别
+
+MCP（Model Context Protocol）解决的是“AI 应用如何用统一协议连接外部工具和上下文”。它可以把文件系统、GitHub、数据库、搜索服务、内部系统封装成 MCP server；Agent 或应用作为 MCP client 连接这些 server，并按协议发现工具、读取资源、获取 prompt 或调用能力。
+
+ToolRegistry 解决的是本项目内部的“哪些工具可用、谁能调用、是否敏感、能否重试、如何审计”。两者关系可以这样理解：
+
+```
+MCP Server / API / 本地函数
+          ↓ 暴露工具能力
+ToolRegistry 或工具网关
+          ↓ 加权限、审批、幂等、限流、审计
+WorkflowEngine
+          ↓ 按 ExecutionPlan 调用
+业务产物 / 通知 / 报表
+```
+
+因此，MCP 不能替代 `ToolRegistry` 的治理职责。即使工具来自 MCP server，也仍然需要：
+
+- tool filtering：只暴露当前工作流允许的工具。
+- approval policy：敏感工具必须审批或 dry-run。
+- idempotency：通知、归档、删除这类副作用不能盲目重试。
+- tracing：记录每次工具发现、调用、失败、降级和恢复。
+- secret isolation：MCP server 和 Agent 都不应直接暴露企业凭证。
+
+### 2. MCP Server 设计时要问的问题
+
+如果把本项目的工具改造成 MCP server，至少要回答：
+
+| 问题 | 工程含义 |
+|------|----------|
+| 暴露哪些工具 | 不要把所有内部 API 一次性暴露给 Agent |
+| 参数 schema 如何定义 | 结构化、可校验、可版本化 |
+| 调用在哪里执行 | 本地 stdio、远程 HTTP、托管 connector 的安全边界不同 |
+| 是否需要审批 | 删除、写文件、发通知、外发数据默认敏感 |
+| 如何审计 | 记录调用者、参数摘要、结果摘要、耗时、错误、trace id |
+| 如何限流 | 防止循环调用或高成本工具被误触发 |
+
+这和本课 `ToolMeta` 中的 `required_args`、`sensitive`、`allowed_roles`、`idempotent`、`rate_limit`、`timeout_seconds` 是同一组治理问题，只是 MCP 把工具接入标准化了。
+
+仓库中提供了一个可选示例：`project_08_workflow_agent/examples/mcp_tool_adapter_demo.py`。它用简化版 MCP tool descriptor 演示如何把外部工具描述注册进 `ToolRegistry`，并继续由 `ToolRegistry` 控制权限、敏感工具、参数校验和审计日志。
+
+### 3. 新 Agent 框架生态怎么看
+
+2025-2026 年出现了更多“带工程约束”的 Agent 框架。它们和本项目不是对立关系，而是提供了不同层级的能力：
+
+| 框架/方向 | 关注点 | 与本项目的对应关系 |
+|-----------|--------|--------------------|
+| OpenAI Agents SDK | tools、handoffs、sessions、tracing、MCP、sandbox | 可替换部分 Runner / 工具调用 / 追踪能力 |
+| Google ADK | 企业级 Agent 构建、调试、部署，多语言生态 | 可作为生产部署和企业集成框架参考 |
+| PydanticAI | 类型安全、结构化输出、依赖注入、eval、observability | 可强化 `ExecutionPlan`、Step 输出和工具 schema |
+| LangGraph | 有状态图、条件路由、checkpoint、人类审批 | 可替换本地顺序 `WorkflowEngine` |
+| Temporal / Prefect | durable execution、任务重试、调度、补偿 | 可承接长时间业务流程的可靠执行 |
+
+学习时不要陷入“哪个框架最好”的问题。更重要的是判断：你的系统需要的是类型安全、工具协议、状态图、durable execution、沙箱、还是部署控制台。框架只是承载这些工程边界的工具。
+
+### 4. 长程流程 Agent 的新增风险
+
+企业流程 Agent 一旦从“几步工具调用”变成“长时间运行的自动化流程”，风险会显著增加：
+
+- 状态膨胀：中间结果、审批状态、工具输出都可能变大且含敏感信息。
+- 副作用难回滚：文件移动、消息发送、外部系统写入不是简单重跑就能恢复。
+- 成本失控：循环规划、重复检索、重复通知会放大 API 和基础设施成本。
+- 责任归因困难：失败可能来自 planner、validator、tool、retry、approval、scheduler 任一环节。
+
+本项目用 `ExecutionPlan`、`PlanValidator`、`ToolRegistry`、`RetryHandler`、`CheckpointStore` 和 `AuditLog` 建立的是最小工程骨架。生产系统可以换框架，但这些边界不能省。
 
 ---
 

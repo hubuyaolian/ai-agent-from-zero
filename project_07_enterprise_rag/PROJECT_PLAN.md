@@ -14,6 +14,7 @@
 - 掌握混合检索路线：向量检索 + BM25 + RRF + Reranker。
 - 掌握文档 metadata、`chunk_id`、`content_hash`、`tenant_id`、`acl_tags` 的设计意义。
 - 掌握多轮问答中的查询改写、引用校验和质量检查工作流。
+- 理解 MCP、GraphRAG、Agentic RAG 与传统企业 RAG pipeline 的关系和边界。
 - 理解“教学版实现”和“生产级系统”之间的边界。
 
 ### 2.2 工程目标
@@ -48,6 +49,7 @@
 - 不实现企业 SSO、RBAC 管理后台和审批流。
 - 不实现分布式向量库集群运维。
 - 不处理所有复杂文档版式，例如扫描 PDF、复杂表格、图片 OCR。
+- 不在本期直接实现 MCP Server、GraphRAG 索引或 Agentic RAG 自主规划循环。
 - 不承诺教学版可直接处理真实企业生产流量。
 
 ## 4. 用户与使用场景
@@ -75,6 +77,7 @@
 | 全文检索 | `rank_bm25` + `jieba` | Elasticsearch/Azure AI Search/OpenSearch 中文分词 |
 | Reranker | Qwen3 Reranker / bge-reranker / LLM 兜底 | 托管 rerank 服务或自部署 cross-encoder |
 | 编排 | LangGraph | LangGraph + 持久化 checkpoint + 可观测平台 |
+| 外部接入 | 本地加载器和检索器 | MCP Server、企业连接器、凭证隔离和工具审批 |
 | 会话 | SQLite | PostgreSQL、Redis、托管会话服务 |
 | 评估 | 本地 eval dataset + 指标脚本 | CI 评估、LangSmith/Ragas/DeepEval 等评估平台 |
 
@@ -152,6 +155,7 @@ flowchart TD
 ### 8.3 文档验收
 
 - Day 18 解释清楚混合检索、权限过滤、索引治理和评估基线。
+- Day 18 补充解释 MCP、GraphRAG、Agentic RAG 的适用场景和不适用边界。
 - Day 19 解释清楚查询改写、引用校验、质量检查和重试策略。
 - 明确标注教学版实现与生产环境差异。
 - 不再把 LLM 自评、Prompt 引用标注、SQLite/ChromaDB/pickle 描述为完整企业级方案。
@@ -175,10 +179,16 @@ flowchart TD
 4. 引入评估流水线：每次修改分块、检索、rerank、prompt 都跑 eval。
 5. 完善可观测性：记录 trace、token、延迟、检索候选、质量评分和失败原因。
 6. 增加人工反馈闭环：用户可标记回答是否有用、引用是否准确。
+7. 把外部数据源接入抽象为 MCP Server 或企业连接器，并保留权限、审计和凭证隔离。
+8. 对复杂关系型知识评估 GraphRAG，但需要同步设计实体级 ACL、图谱更新和关系证据引用。
+9. 对复杂问题引入 Agentic RAG planner 时，必须设置最大步数、成本预算、工具白名单和失败降级。
 
 ## 11. 当前资料依据
 
 - 混合检索、BM25 + 向量、RRF、Reranker 仍是当前主流 RAG 路线。
 - 新建 Qwen embedding 项目应优先评估 `text-embedding-v4` 或 Qwen3 Embedding/Reranker；旧 v3 索引需要独立保留，不应混用。
 - LangGraph 适合需要状态、条件分支、重试、记忆和审计的 RAG 工作流。
+- MCP 是工具和上下文接入协议，不替代权限过滤、脱敏、引用校验和质量评估。
+- GraphRAG 适合关系密集、多跳推理场景，不应替代普通问答中的混合检索基线。
+- Agentic RAG 可以让检索进入规划和验证循环，但必须控制成本、延迟和工具调用边界。
 - 教学版的 ChromaDB、SQLite、pickle 选择是为了降低学习成本，不代表生产默认方案。
