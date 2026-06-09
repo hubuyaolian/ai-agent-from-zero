@@ -260,6 +260,48 @@
     - 追问：project_08 的 ToolRegistry 和 project_09 的 MessageBus 分别代表两类执行模型，如何统一接口？
     - 追问：统一框架如何同时支持“工具流程自动化”和“多 Agent 产物交付”？
 
+## 八、2026 前沿扩展：MCP、类型安全与长程开发 Agent
+
+57. MCP 在多 Agent 开发团队里解决什么问题？
+    - 追问：Planner、Developer、Tester、DocWriter 分别应该看到哪些 MCP 工具？
+    - 追问：为什么 Planner 可以读需求和接口文档，但不应该写文件或执行测试？
+    - 追问：MCP 只是工具暴露协议，角色最小权限应该由谁强制执行？
+
+58. 如果把文件读写、测试运行、代码搜索都封装成 MCP Server，会引入哪些新风险？
+    - 追问：Developer 调用写文件工具前是否需要 DeliveryManager 或人工审批？
+    - 追问：Tester 的“运行测试”工具为什么必须是白名单命令，而不能暴露任意 shell？
+    - 追问：MCP Server 返回的文件内容、测试日志和 diff 是否可能包含密钥或隐私数据？
+
+59. 课程新增 `examples/structured_output_schema_demo.py`，请说明它和 `PlannerAgent` 的关系。
+    - 追问：为什么 LLM planner 输出要先当作不可信 dict，而不是直接构造 `DevelopmentPlan`？
+    - 追问：路径白名单、角色白名单、依赖合法性、必填字段校验分别防什么？
+    - 追问：为什么这个示例不依赖 PydanticAI，也仍然能体现类型安全的核心思想？
+
+60. PydanticAI 或等价 schema/eval 框架能补强 project_09 的哪些薄弱点？
+    - 追问：`DevelopmentPlan`、`Artifact`、`TestReport`、`DeliveryResult` 哪些最需要强 schema？
+    - 追问：结构化输出校验通过是否等于语义正确？还需要哪些 eval 或人工 review？
+    - 追问：如果 schema 版本升级，旧 checkpoint、旧交付索引和历史记录如何兼容？
+
+61. 长程开发 Agent 和当前两日教学版工作流有什么区别？
+    - 追问：长程开发 Agent 需要跨多轮读取需求、规划、生成代码、运行测试、修复、等待审批和恢复执行。当前项目哪些能力还不够？
+    - 追问：checkpoint、resume、预算上限、人工中断点、trace 分别应放在哪些模块？
+    - 追问：为什么“能连续执行更多步”不等于“更可靠”？
+
+62. Sandbox 为什么是长程开发 Agent 的底线？
+    - 追问：当前 `TesterAgent` 用临时目录和白名单 unittest，为什么仍然不等于生产沙箱？
+    - 追问：容器、微虚拟机、网络白名单、CPU/内存/磁盘限制、凭证代理分别防什么？
+    - 追问：如果 Agent 可以安装依赖、访问网络和修改真实仓库，审批和隔离边界应该如何升级？
+
+63. OpenAI Agents SDK、AutoGen、CrewAI、Google ADK 和 LangGraph 如何映射到本项目？
+    - 追问：Agents SDK 的 agents-as-tools、handoffs、tracing、MCP、sandbox 分别对应哪些本地模块？
+    - 追问：AutoGen/CrewAI 更容易表达团队协作，但为什么仍然不能替代 `DeliveryManager` 和 `TesterAgent` 的安全门禁？
+    - 追问：Google ADK 更适合部署和企业集成，和课程本地顺序编排的学习目标有何不同？
+
+64. 设计一个“长程开发 Agent 上线前评估集”，你会测什么？
+    - 追问：需求拆解正确率、代码通过率、修复轮次、沙箱违规率、人工介入率、token 成本、平均运行时间分别如何定义？
+    - 追问：如何设计恶意需求，例如要求读取 `.env`、执行任意 shell、写出交付目录、伪造测试通过？
+    - 追问：评估结果如何决定是否允许 Agent 从“建议模式”升级到“可写入模式”？
+
 ## 面试评分建议
 
 强候选人通常具备这些特征：
@@ -270,6 +312,7 @@
 - 能意识到 LLM 生成代码必须经过路径白名单、静态检查、白名单测试、有限修复和人工确认边界。
 - 能指出 `AgentRole` 未强制权限、MessageBus 未按 run 隔离、`stage` 未更新、静态黑名单可绕过、unittest 子进程不等于沙箱这些源码级缺口。
 - 能把本地顺序编排映射到 LangGraph 条件边、OpenAI Agents SDK tracing/guardrails、AutoGen team runtime 或 CrewAI Flows，但不会把框架能力当成安全替代品。
+- 能解释 MCP 工具共享、结构化 schema 校验、PydanticAI 类型安全和长程开发 Agent 沙箱边界之间的关系。
 
 弱候选人常见表现：
 
@@ -278,3 +321,4 @@
 - 让生成代码直接写入仓库或执行任意 shell 命令，缺少沙箱意识。
 - 不理解修复循环为什么必须有上限，也说不清何时升级到人工确认。
 - 排查失败时只看最终报错，不会追踪计划、消息、测试报告、产物索引和交付报告。
+- 认为换成 OpenAI Agents SDK、AutoGen、CrewAI 或 ADK 后，就不需要本地质量门禁、路径校验和人工审批。

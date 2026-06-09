@@ -237,6 +237,43 @@
     - 追问：如果接 OpenTelemetry，你会给 plan、step、tool invocation、retry、approval、checkpoint 分别建哪些 span？
     - 追问：哪些指标应该告警，例如失败率、审批积压、重试耗尽、工具超时、调度延迟？
 
+## 八、2026 前沿扩展：MCP 与 Agent 框架生态
+
+52. MCP 和 `ToolRegistry` 的职责边界是什么？
+    - 追问：MCP 解决“工具如何被发现和调用”，`ToolRegistry` 解决“谁能调用、是否审批、能否重试、如何审计”，这个分层为什么重要？
+    - 追问：如果工具来自 MCP Server，为什么仍然要走 `validate_args()`、`can_execute()` 和 `log_call()`？
+    - 追问：MCP tool descriptor 中的 schema 和本项目 `ToolMeta.required_args` 有什么对应关系？
+
+53. 课程新增 `examples/mcp_tool_adapter_demo.py`，请解释这个示例验证了什么工程边界。
+    - 追问：`MCPToolDescriptor` 里 `sensitive`、`allowed_roles`、`idempotent` 为什么不能只停留在描述层？
+    - 追问：为什么 analyst 可以调用 `crm_lookup_customer`，却不能调用 `crm_export_customer`？
+    - 追问：`registry.call_log()` 只记录成功调用，这对失败权限拦截的审计是否足够？生产版应该如何补？
+
+54. 如果把本项目工具全部 MCP 化，最容易犯什么设计错误？
+    - 追问：一次性暴露所有内部 API 给 Agent 有什么风险？
+    - 追问：删除文件、发送通知、导出客户数据这类工具为什么默认应该敏感并需要审批？
+    - 追问：MCP Server 是否应该持有企业凭证？如何做凭证代理和最小权限？
+
+55. OpenAI Agents SDK、Google ADK、PydanticAI 与本项目分别能对齐哪些能力？
+    - 追问：Agents SDK 的 tools、handoffs、sessions、tracing、MCP、sandbox 可以替换或增强哪些模块？
+    - 追问：Google ADK 更偏企业级部署和生态集成，和本地教学版 CLI 的边界在哪里？
+    - 追问：PydanticAI 强调类型安全、依赖注入、eval 和 observability，它能如何强化 `ExecutionPlan` 和工具输出？
+
+56. 为什么“换成新框架”不能替代计划校验和工具治理？
+    - 追问：框架提供 tracing，不代表业务知道哪些工具可以执行；框架提供 schema，不代表参数满足企业权限策略。这两句话怎么理解？
+    - 追问：如果新框架支持自动调用 MCP 工具，仍然需要哪些本地 policy？
+    - 追问：你会如何设计框架无关的治理层，使 LangGraph、Temporal、Agents SDK 都能复用？
+
+57. 长程流程 Agent 比短流程 Agent 多了哪些风险？
+    - 追问：状态膨胀、副作用难回滚、成本失控、责任归因困难分别对应本项目哪些模块？
+    - 追问：`CheckpointStore`、`AuditLog`、`RetryHandler`、`PlanValidator` 如何共同限制长程执行风险？
+    - 追问：如果一个流程等待审批 3 天后恢复，工具 schema、用户权限、源文件内容都变了，系统应该如何处理？
+
+58. 如何评估 MCP 化和新框架迁移是否值得？
+    - 追问：你会看工具复用率、接入成本、审计完整性、平均开发周期、线上失败率，还是团队维护能力？
+    - 追问：如果当前 Python 函数工具已经够用，什么时候不应该引入 MCP？
+    - 追问：迁移过程中如何避免“为了框架而框架”，导致课程主线和业务价值变弱？
+
 ## 面试评分建议
 
 强候选人通常具备这些特征：
@@ -247,6 +284,7 @@
 - 能从 checkpoint/resume、非幂等重试、路径沙箱和审计日志角度分析真实企业风险。
 - 能深入源码细节，指出 `timeout_seconds`、`fallback`、`rate_limit`、checkpoint 原子性、状态优先级和并行执行这些尚未生产化的缺口。
 - 能把教学版本地实现映射到 LangGraph、Temporal、Prefect、Celery、OpenTelemetry 等生产化方向，但不把它们混为一谈。
+- 能区分 MCP 工具接入协议和 `ToolRegistry` 治理职责，并能评价 ADK、PydanticAI、Agents SDK 对本项目的真实增益。
 
 弱候选人常见表现：
 
@@ -255,3 +293,4 @@
 - 忽略非幂等工具重试风险，无法解释为什么通知和归档不能盲目重试。
 - 排查失败时只看最终报错，不会看计划、checkpoint、依赖状态、审计和工具日志。
 - 不能区分本地教学调度和生产级 durable execution。
+- 认为接入 MCP 或新 Agent 框架后就不需要权限、审批、幂等和审计。
