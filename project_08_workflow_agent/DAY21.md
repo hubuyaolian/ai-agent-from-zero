@@ -155,6 +155,16 @@ def approval_node(state: WorkflowState) -> dict:
     }
 ```
 
+这个 `approval_node` 可以理解为 `PermissionRequest` hook 的教学版：当计划里存在敏感步骤时，运行时不是继续调用工具，而是把当前状态保存为 `waiting_approval`。审批通过后再 resume，才能进入执行节点。
+
+`execute_node` 则同时包含 `PreToolUse` 和 `PostToolUse` 的思想：
+
+- 调用工具前，先检查工具是否注册、参数是否完整、用户是否有权限、依赖是否满足。
+- 调用工具后，把结果、错误、耗时和摘要写入执行日志或审计日志。
+- 如果工具失败，再交给重试或降级策略处理。
+
+真实框架可能把这些逻辑封装成 hooks / middleware；本课先把它们写成显式代码，是为了让每个安全边界都能被看见、测试和讲清楚。
+
 #### execute_node — 逐步骤执行节点
 
 ```python

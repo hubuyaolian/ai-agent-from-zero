@@ -739,7 +739,24 @@ Round 2: 0 HIGH + 1 LOW 问题 ✅ 通过
 
 生产系统还应补充真正的 checkpoint/resume。比如 Developer 生成代码后暂停等待人类 review，用户批准后从同一个 run 继续测试，而不是重新开始整个工作流。
 
-### 3. Sandbox 是长程开发 Agent 的底线
+### 3. Hooks 是长程 Agent 的运行时刹车
+
+长程 Agent 运行时间越长，越不能只靠一开始的 System Prompt 约束。实际工程里，需要把关键节点做成 hooks，让运行时在每一步都能重新检查权限、预算、状态和风险。
+
+在开发 Agent 场景中，常见 hooks 可以这样设计：
+
+| Hook | 检查内容 | 失败时怎么处理 |
+|------|----------|----------------|
+| UserPromptSubmit | 用户需求是否含越权、危险命令或敏感数据 | 拒绝、脱敏、要求补充确认 |
+| SessionStart / SubagentStart | 当前 run 的角色、工具、预算、工作目录是否正确 | 禁止启动或降级为只读模式 |
+| PreToolUse | 文件路径、命令、网络、依赖安装、MCP 工具是否越界 | 阻止工具执行，写入审计 |
+| PermissionRequest | 写文件、删文件、提交代码、发通知、导出数据是否需要人审 | 保存 checkpoint，等待人工决定 |
+| PostToolUse | 工具结果是否异常、是否泄露敏感信息、是否需要补偿 | 追加反馈、触发修复、停止流程 |
+| Stop / SubagentStop | 是否要保存摘要、成本、产物索引和下一步恢复点 | 生成 trace 和 checkpoint |
+
+这和本项目现有边界是一致的：`MAX_FIX_ROUNDS` 是成本 hook，`validate_artifact_path()` 是写文件前 hook，`MessageBus.history()` 是审计 hook，测试失败后的修复循环是 post-test hook。课程没有把它们做成通用 HookManager，是为了先让学生看懂显式流程；生产版可以再把这些散点抽象成统一生命周期机制。
+
+### 4. Sandbox 是长程开发 Agent 的底线
 
 本项目的 `TesterAgent` 只运行白名单 `unittest`，并把生成项目写到临时目录。这是教学版的最低安全边界。生产版如果允许 Agent 运行命令、安装依赖、访问网络或修改真实仓库，就必须使用更强隔离：
 
@@ -752,7 +769,7 @@ Round 2: 0 HIGH + 1 LOW 问题 ✅ 通过
 
 OpenAI Agents SDK 等新框架开始把 sandbox、files、tools、tracing 这些能力放进运行时，这是因为长程 Agent 的可靠性越来越依赖执行环境，而不是只依赖 prompt。
 
-### 4. 本项目如何扩展到长程模式
+### 5. 本项目如何扩展到长程模式
 
 如果要把本课升级为更接近真实开发助手，可以按这个顺序扩展：
 

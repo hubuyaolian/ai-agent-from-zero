@@ -6,7 +6,7 @@
 
 今天的课程将从一个全新的视角重新审视工具调用——从"对话中的工具"升级为"企业级工具注册中心"，从"单次 ReAct 循环"升级为"多步骤复杂流程的可审计执行链"。
 
-> 技术状态说明（2026）：LangGraph 仍是长时间、有状态 Agent 工作流的主流编排选择之一，不落后。但企业自动化不能只靠内存状态和简单重试。当前最佳实践强调 durable execution、checkpoint、trace、幂等副作用、审批中断、结构化计划校验和可恢复任务。Python `schedule` 库只适合本地教学和简单定时任务，生产调度应评估 APScheduler、Celery Beat、Prefect、Temporal 等方案。工具接入层也在协议化：MCP 已成为 Agent 连接外部工具和数据源的重要标准；Google ADK、PydanticAI、OpenAI Agents SDK 等框架则把工具、结构化输出、追踪和部署能力进一步产品化。
+> 技术状态说明（2026）：LangGraph 仍是长时间、有状态 Agent 工作流的主流编排选择之一，不落后。但企业自动化不能只靠内存状态和简单重试。当前最佳实践强调 durable execution、checkpoint、trace、幂等副作用、审批中断、结构化计划校验和可恢复任务。Python `schedule` 库只适合本地教学和简单定时任务，生产调度应评估 APScheduler、Celery Beat、Prefect、Temporal 等方案。工具接入层也在协议化：MCP 已成为 Agent 连接外部工具和数据源的重要标准；很多 Agent 运行时和 CLI 还会提供 hooks / middleware，把工具执行前、审批时、执行后、会话开始和停止等生命周期事件变成可插拔治理点。Google ADK、PydanticAI、OpenAI Agents SDK 等框架则把工具、结构化输出、追踪和部署能力进一步产品化。
 
 ---
 
@@ -27,7 +27,7 @@
 - 掌握 LLM 驱动的任务拆解：将复杂指令分解为可执行子任务链。
 - 理解执行计划（ExecutionPlan）的数据结构与流转机制。
 - 实现文件处理、CSV 读取统计、报表生成、消息推送等核心工具；Excel 读写作为可选扩展，不作为两日项目的硬依赖。
-- 理解 MCP 与 ToolRegistry 的职责差异，以及 ADK、PydanticAI 等新框架和本项目的关系。
+- 理解 MCP 与 ToolRegistry 的职责差异，以及 hooks、ADK、PydanticAI 等新框架和本项目的关系。
 
 ---
 
@@ -707,7 +707,52 @@ WorkflowEngine
 
 仓库中提供了一个可选示例：`project_08_workflow_agent/examples/mcp_tool_adapter_demo.py`。它用简化版 MCP tool descriptor 演示如何把外部工具描述注册进 `ToolRegistry`，并继续由 `ToolRegistry` 控制权限、敏感工具、参数校验和审计日志。
 
-### 3. 新 Agent 框架生态怎么看
+### 3. Agent Hooks：工具生命周期里的拦截点
+
+很多成熟 Agent 运行时都会提供 hooks，也可以叫 lifecycle hooks 或 middleware。它不是“再写一个 prompt”，而是在工具调用链路上预留可插拔事件，让系统在关键节点自动执行治理逻辑。
+
+最常见的结构是：
+
+```
+event 事件
+  ↓ 匹配 tool / agent / session / matcher
+handler 处理器
+  ↓ 返回 allow / deny / update / feedback / context
+runtime 根据返回值继续、阻止、改写或记录
+```
+
+以工具调用为例，企业 Agent 至少应该理解三类 hooks：
+
+| Hook 事件 | 触发时机 | 常见用途 |
+|-----------|----------|----------|
+| PreToolUse | 工具真正执行前 | 参数校验、路径沙箱、工具白名单、限流、脱敏、改写参数、阻止高风险动作 |
+| PermissionRequest | 需要审批或权限决策时 | 人工审批、策略审批、角色权限判断、租户策略判断 |
+| PostToolUse | 工具执行后 | 审计日志、trace、指标、结果脱敏、追加反馈、触发补偿或停止流程 |
+
+Codex CLI 的开源实现也采用类似思路：从配置中发现 hooks，按事件和 matcher 选择处理器，把工具名、入参、会话、工作目录等上下文传给 hook；`PreToolUse` 可以阻止或改写工具输入，`PermissionRequest` 可以给出允许或拒绝决策，`PostToolUse` 可以追加上下文、反馈或要求停止。这里的重点不是某个 CLI 的语法，而是运行时治理模型：**工具执行不能只由模型输出决定，还要被程序化策略拦截。**
+
+把这个模型映射回本项目：
+
+| 本项目位置 | 对应 hook 思想 | 作用 |
+|------------|----------------|------|
+| `PlanValidator.validate()` | plan-level pre hook | 在执行前拒绝未知工具、缺参、循环依赖 |
+| `ToolRegistry.validate_args()` | PreToolUse | 工具执行前校验必填参数 |
+| `ToolRegistry.can_execute()` | PreToolUse / PermissionRequest | 根据用户角色决定是否允许执行 |
+| `WorkflowEngine._execute_step()` 中的敏感工具判断 | PermissionRequest | 未审批时保存 checkpoint，不执行副作用 |
+| `AuditLog.record()` / `ToolRegistry.log_call()` | PostToolUse | 记录工具调用、结果摘要、耗时和错误 |
+| `RetryHandler.execute()` | error hook / retry middleware | 失败后按幂等策略重试或停止 |
+
+注意三个边界：
+
+- pre hook 是真正的安全门禁，必须发生在工具副作用之前。
+- permission hook 不是 UI 装饰，而是执行引擎必须强制执行的审批路径。
+- post hook 不能假装“回滚一切”，它主要负责审计、反馈、告警和后续补偿。
+
+生产系统还要考虑 hook 自身的安全：本地命令型 hook 本质上也是代码执行，必须有信任机制、超时限制、最小权限、输出大小限制和审计记录。多个 hook 同时匹配时，还要定义清楚执行顺序、并发策略，以及多个 hook 同时改写参数时谁生效。
+
+仓库中提供了一个可选示例：`project_08_workflow_agent/examples/hook_lifecycle_demo.py`。它用简化版 `HookLifecycle` 演示 `pre_tool_use` 阻止或改写参数、`permission_request` 审批敏感工具、`post_tool_use` 追加后置反馈。真实生产系统可以把这套思想集成进 `WorkflowEngine` 或工具网关；本课先用独立示例讲清楚机制，避免把主流程代码改得过重。
+
+### 4. 新 Agent 框架生态怎么看
 
 2025-2026 年出现了更多“带工程约束”的 Agent 框架。它们和本项目不是对立关系，而是提供了不同层级的能力：
 
@@ -721,7 +766,7 @@ WorkflowEngine
 
 学习时不要陷入“哪个框架最好”的问题。更重要的是判断：你的系统需要的是类型安全、工具协议、状态图、durable execution、沙箱、还是部署控制台。框架只是承载这些工程边界的工具。
 
-### 4. 长程流程 Agent 的新增风险
+### 5. 长程流程 Agent 的新增风险
 
 企业流程 Agent 一旦从“几步工具调用”变成“长时间运行的自动化流程”，风险会显著增加：
 
