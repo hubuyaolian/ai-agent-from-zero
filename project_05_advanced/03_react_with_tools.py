@@ -10,6 +10,15 @@ Day 11 演示：ReAct Agent + 丰富工具集处理复杂多步推理任务。
 
 # 导入操作系统相关模块，用于后续文件物理删除
 import os
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
+
+# 将项目根目录加入模块搜索路径，保证 `python project_05_advanced/03_react_with_tools.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 的 @tool 装饰器
 from langchain_core.tools import tool
 # 导入 LangChain 基础消息类

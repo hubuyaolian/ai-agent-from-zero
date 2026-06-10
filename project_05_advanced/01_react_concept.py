@@ -11,6 +11,15 @@ Day 11 演示：纯手写实现底层 ReAct (Reasoning + Acting) 学术原理解
 
 # 导入正则表达式库，用于提取大模型输出的 Action 指令
 import re
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
+
+# 将项目根目录加入模块搜索路径，保证 `python project_05_advanced/01_react_concept.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 的消息对象
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
