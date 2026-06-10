@@ -37,6 +37,11 @@ pydantic>=2.0.0
 # ----- HTTP 请求（阶段1 原始 API 调用使用） -----
 requests>=2.31.0
 
+# ----- Agent 服务化与接口测试（Project 11 使用） -----
+fastapi>=0.111.0
+uvicorn>=0.30.0
+httpx>=0.27.0
+
 # ----- 本地 Embedding（阶段4+ RAG 使用，无需 API Key） -----
 # 默认模型 BAAI/bge-small-zh-v1.5：中文专用、~93M 参数、首跑自动从 HuggingFace 下载
 sentence-transformers>=2.2.0

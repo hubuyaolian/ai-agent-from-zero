@@ -1,8 +1,8 @@
-# 从零搭建 AI Agent 学习计划 🚀（框架版）
+# 从零搭建 AI Agent 学习计划（LangChain + LangGraph + 企业项目版）
 
 > **方针**：以 LangChain + LangGraph 框架为主线，边用边讲原理，快速上手。
 > **模型**：国产模型（通义千问 / DeepSeek / 智谱 / Kimi）+ Gemini，统一通过 OpenAI 兼容接口调用。
-> **时间**：每天 4-6 小时，预计 **2.5 周** 完成全部内容。
+> **时间**：共 11 个项目 / 27 个学习日。每天 4-6 小时学习时，建议按 4-6 周节奏完成。
 
 ---
 
@@ -41,6 +41,9 @@ graph LR
     E --> F["阶段6<br>多Agent系统<br>3-4天"]
     F --> G["毕业项目一<br>企业级RAG<br>2天"]
     G --> H["毕业项目二<br>流程自动化Agent<br>2天"]
+    H --> I["毕业项目三<br>多Agent开发团队<br>2天"]
+    I --> J["选型总结课<br>主流Agent框架<br>2天"]
+    J --> K["生产运维课<br>Agent服务化<br>2天"]
 ```
 
 ---
@@ -300,7 +303,7 @@ project_06_multi_agent/
 
 ---
 
-## 毕业项目：企业级 RAG 智能知识库问答 Agent（2 天）
+## 毕业项目一：企业级 RAG 智能知识库问答 Agent（2 天）
 
 > [!IMPORTANT]
 > 这是整个课程的毕业项目，综合运用 Day 1-17 所学的全部核心能力。
@@ -352,6 +355,8 @@ project_07_enterprise_rag/
 - 来源追踪：引用标注 [1][2] + 末尾引用列表
 - LangGraph 6 节点图：意图解析→混合检索→重排→生成→质量检查→格式化
 - 质量闭环：LLM 自评 + 重试循环（最多 2 次）
+- 企业治理：租户 ACL、PII 脱敏、审计日志、来源溯源
+- RAG 压测：摄取吞吐、检索延迟、并发查询、缓存与降级策略
 - CLI 交互：/import、/history、/session 等命令
 
 ---
@@ -417,6 +422,8 @@ project_08_workflow_agent/
 - ErrorLogger：异常日志持久化
 - TaskScheduler：Cron 定时调度 + 目录监控触发
 - ReportGenerator：日报/周报全自动生成 + 推送通知
+- Agent hooks：before/after/error 钩子，用于审计、权限、观测和阻断
+- 压力治理：队列积压、工具超时、失败风暴、重试放大和人工审批瓶颈
 
 ---
 
@@ -474,7 +481,127 @@ project_09_dev_team/
 - "写→查→改"自检闭环（最多 3 轮修复循环）
 - 代码产物解析与持久化
 - 完整交付报告生成（架构+代码+测试+文档+协作统计）
+- 受控交付：sandbox、安全扫描、禁止危险代码模式、长任务 checkpoint
+- 团队级压力治理：角色队列、消息总线堆积、测试瓶颈和修复循环上限
 - CLI 交互式开发流程
+
+---
+
+## 选型总结课：主流 Agent 框架比较与工程选型（2 天）
+
+> [!IMPORTANT]
+> 这是前 9 个项目后的收束课，不追求框架排行榜，而是训练“需求 -> 能力标签 -> 框架匹配”的工程判断力。
+
+### 学习目标
+- 理解主流 Agent 框架的分类：状态图编排、原生运行时、企业开发套件、类型安全、多 Agent 对话、角色团队、RAG 数据层、企业中间件。
+- 掌握 LangGraph、OpenAI Agents SDK、Google ADK、PydanticAI、AutoGen、CrewAI、LlamaIndex Agents、Semantic Kernel 的定位。
+- 理解 AgentScope、CAMEL、Haystack、Agno、Mastra、Strands Agents 的研究价值或新兴生态位置。
+- 能把 project_07、project_08、project_09 的真实能力需求映射到框架组合。
+- 能区分 Agent 框架、MCP 协议、观测平台、评估平台和模型网关。
+
+### Day 24：主流 Agent 框架横向比较
+
+```
+project_10_agent_frameworks/
+├── README.md                     # 项目说明和运行方式
+├── PROJECT_PLAN.md               # 选型课程计划和验收标准
+├── DAY24.md                      # 主流 Agent 框架横向比较
+├── examples/
+│   └── framework_selection_matrix.py
+└── tests/
+    └── test_framework_selection.py
+```
+
+**核心能力**：
+- 按工程问题分类框架，而不是按热度排行
+- 明确 MCP 是协议，不是 Agent 框架
+- 明确 LangSmith、OpenTelemetry、Phoenix、Logfire 是观测或评估工具，不是 Agent 框架
+- 说明框架不能替代权限、审计、sandbox、checkpoint、eval、压测和成本治理
+
+### Day 25：选型方法论与项目映射
+
+```
+project_10_agent_frameworks/
+├── DAY25.md                      # 能力标签、决策树、项目映射
+├── 01_framework_comparison.py    # 终端框架对比和交互式选型入口
+└── examples/
+    └── agent_capability_mapper.py
+```
+
+**核心能力**：
+- 能力标签定义：state_graph、checkpoint、rag_heavy、tool_governance、typed_output 等
+- 框架组合风险：状态序列化不一致、依赖冲突、事件循环竞争、调试链路断裂
+- 项目映射：企业级 RAG、工作流 Agent、多 Agent 开发团队分别适合什么框架组合
+- 可运行入口：按场景输出框架推荐，并用测试覆盖边界场景
+
+---
+
+## 生产运维课：Agent 服务化、模型网关与上线治理（2 天）
+
+> [!IMPORTANT]
+> 这是课程从“能跑的 Agent”走向“可对外服务的 Agent”的收束项目，重点是 API 服务、鉴权、限流、模型网关、观测、评估和部署边界。
+
+### 学习目标
+- 理解 Agent CLI、本地脚本和线上 API 服务的差异。
+- 能用 FastAPI 暴露 `/chat`、`/stream`、`/health`、`/metrics`、`/eval/smoke`。
+- 掌握 API Key 鉴权、scope 校验和令牌桶限流的最小实现。
+- 掌握模型网关的路由、fallback、上下文限制、预算检查和成本记录。
+- 理解 trace、metrics、smoke eval、Dockerfile 和健康检查在生产服务中的位置。
+
+### Day 26：Agent API 服务化、鉴权与流式输出
+
+```
+project_11_agent_service_ops/
+├── README.md                     # 项目说明和运行方式
+├── PROJECT_PLAN.md               # 生产运维课程计划和验收标准
+├── DAY26.md                      # Agent API 服务化课程
+├── api/
+│   ├── app.py                    # FastAPI app 工厂
+│   ├── errors.py                 # 全局异常处理：401/429/402
+│   ├── routes.py                 # /chat /stream /health /metrics /eval/smoke
+│   └── schemas.py                # 请求响应模型
+├── security/
+│   ├── auth.py                   # API Key 鉴权与 scope 校验
+│   └── rate_limiter.py           # 令牌桶限流
+└── main.py                       # 本地服务启动入口
+```
+
+**核心能力**：
+- FastAPI 服务入口和路由拆分
+- 稳定 API 契约：请求模型、响应模型、错误状态码
+- 全局异常映射：鉴权失败、限流、预算不足不在每个路由里重复处理
+- API Key 鉴权：`X-API-Key`、租户上下文、scope
+- 令牌桶限流：容量、补充速率、拒绝与 retry-after
+- SSE 流式响应：`text/event-stream` 和分片输出；当前是协议演示，不是真 token 流
+
+### Day 27：模型网关、成本治理、可观测性、评估与部署
+
+```
+project_11_agent_service_ops/
+├── DAY27.md                      # 生产运维治理课程
+├── gateway/
+│   ├── model_gateway.py          # 模型路由、fallback、预算检查
+│   └── cost_tracker.py           # token 估算与租户成本统计
+├── observability/
+│   ├── tracing.py                # run_id、span、trace event
+│   └── metrics.py                # 请求、错误、token、成本、延迟指标
+├── evaluation/
+│   └── smoke_eval.py             # 线上冒烟评估
+├── deployment/
+│   ├── Dockerfile                # 容器构建示例
+│   └── README.md                 # 部署说明
+└── tests/                        # 单元测试和接口契约测试
+```
+
+**核心能力**：
+- 模型网关：provider、model、priority、fallback、上下文限制
+- 成本治理：调用前预算判断、调用后成本记录、按租户统计
+- Trace：用 `run_id` 串联鉴权、限流、模型网关和失败事件
+- Metrics：请求数、错误数、token、成本、延迟、模型调用次数
+- Smoke eval：发布前后快速确认服务没有明显退化
+- 生产边界：内存成本/指标/trace 的持久化替代方案
+- 集成路径：如何把 `project_07/08/09` 的真实 workflow 接到服务层
+- 部署边界：环境变量、健康检查、`.dockerignore`、非 root 容器、发布后回滚
 
 ---
 
@@ -501,5 +628,15 @@ project_09_dev_team/
 ├── project_06_multi_agent/       # 阶段 6：多 Agent 协作与综合项目实战目录
 ├── project_07_enterprise_rag/    # 毕业项目一：企业级 RAG 智能知识库问答 Agent
 ├── project_08_workflow_agent/    # 毕业项目二：自动化业务流程调度 Agent
-└── project_09_dev_team/          # 毕业项目三：多智能体协同开发助手系统
+├── project_09_dev_team/          # 毕业项目三：多智能体协同开发助手系统
+├── project_10_agent_frameworks/  # 选型总结课：主流 Agent 框架比较与工程选型
+└── project_11_agent_service_ops/ # 生产运维课：Agent 服务化、模型网关与上线治理
 ```
+
+---
+
+## 当前课程边界
+
+当前课程已经覆盖 AI Agent 工程主线：模型调用、Prompt、工具、记忆、RAG、ReAct、Planning、多 Agent、企业级 RAG、工作流 Agent、开发团队 Agent、框架选型和生产化服务运维。
+
+后续如果继续扩展，可以把 project_11 升级成完整平台课：Web 控制台、异步任务队列、OpenTelemetry 后端、Prometheus/Grafana 看板、Kubernetes 部署、灰度发布和多租户成本看板。

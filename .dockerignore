@@ -1,0 +1,12 @@
+.git
+.env
+.venv
+venv
+env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+project_07_enterprise_rag/runtime_data/
+project_08_workflow_agent/data/output/
+project_11_agent_service_ops/runtime_data/

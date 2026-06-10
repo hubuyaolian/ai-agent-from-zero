@@ -12,7 +12,7 @@
 - 课程需要修正“全自动交付”的表述。当前更合理的目标是“受控自动化”：确定性编排、专家 Agent、结构化产物、沙箱测试、人工审批、审计追踪。
 - 对教学项目而言，本期先实现 Python 本地顺序编排；生产化可迁移到 LangGraph checkpointer、OpenAI Agents SDK tracing/guardrails、AutoGen team runtime 或 CrewAI Flows。
 - MCP、Agent hooks、Google ADK、PydanticAI 等新生态可以补充工具接入、生命周期治理、部署、类型安全和评估能力，但不改变本课的核心判断：代码生成必须经过结构化校验、沙箱执行和质量门禁。
-- 长程开发 Agent 的重点不是连续自动执行更多步骤，而是 checkpoint、hooks、sandbox、成本预算、人工中断和全链路 trace。
+- 长程开发 Agent 的重点不是连续自动执行更多步骤，而是 checkpoint、hooks、sandbox、压力治理、成本预算、人工中断和全链路 trace。
 
 ## 3. 项目目标
 
@@ -23,7 +23,7 @@
 - 掌握 MessageBus、TaskAssignment、TaskResult 的消息通信。
 - 掌握结构化产物、质量门禁、安全落盘和修复循环。
 - 理解 MCP 在多 Agent 工具共享中的作用，以及 hooks、PydanticAI/ADK/Agents SDK 等框架与本项目的映射关系。
-- 理解为什么开发团队 Agent 必须带沙箱和人工确认边界。
+- 理解为什么开发团队 Agent 必须带沙箱、压力治理和人工确认边界。
 
 ### 3.2 工程目标
 
@@ -43,6 +43,7 @@
 | 开发 | 生成 Python CLI 项目代码和测试文件 |
 | 测试 | AST/文本静态检查 + `unittest` 执行 |
 | 修复 | 根据测试反馈做有限轮次修复 |
+| 压力治理 | 任务并发、修复轮次、沙箱资源、人工介入率的指标设计 |
 | 交付 | 安全写入 `data/output/<project>/`，生成报告 |
 | CLI | `run`、`plan`、`team`、`history`、`artifacts` |
 
@@ -114,5 +115,6 @@ flowchart TD
 6. 增加基准任务集，对生成质量做持续评估。
 7. 把文件、仓库、测试、文档等能力封装为 MCP Server，并按 Agent 角色配置最小权限。
 8. 把角色启动、handoff、工具调用、测试执行和交付前检查抽象为 hooks / middleware。
-9. 引入 PydanticAI 或等价 schema/eval 框架，强化计划、代码产物、测试报告和交付报告的结构校验。
-10. 扩展到长程开发模式时，必须增加 checkpoint、隔离沙箱、预算上限、人工中断点和审计 trace。
+9. 建立长程任务压测基线：完成率、P95 运行时间、工具调用数、修复轮次、队列等待、沙箱资源和人工介入率。
+10. 引入 PydanticAI 或等价 schema/eval 框架，强化计划、代码产物、测试报告和交付报告的结构校验。
+11. 扩展到长程开发模式时，必须增加 checkpoint、隔离沙箱、预算上限、人工中断点和审计 trace。

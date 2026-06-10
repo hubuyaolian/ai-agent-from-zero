@@ -14,6 +14,7 @@
 - 掌握 ToolRegistry 的工具元数据、权限、schema、审批和审计设计。
 - 掌握结构化 ExecutionPlan、依赖拓扑排序和参数模板填充。
 - 掌握执行引擎中的重试、降级、幂等和执行报告。
+- 掌握流程 Agent 压力治理：限流、排队、熔断、重试预算和压测指标。
 - 理解 MCP 与 ToolRegistry 的职责差异，以及 hooks、ADK、PydanticAI、OpenAI Agents SDK 等框架的工程取舍。
 - 理解本地调度与生产级工作流编排的边界。
 
@@ -37,6 +38,7 @@
 | 工具集 | 文件读写、CSV 读取、统计、报表写入、通知模拟 |
 | 规划 | 规则规划器、计划校验、拓扑排序、参数模板 |
 | 执行 | 顺序执行引擎、checkpoint/resume、重试、降级、幂等键、执行报告 |
+| 压力治理 | 滑动窗口限流、熔断器、任务压测指标 |
 | 调度 | 简化 `daily/weekly` 本地调度注册和查询 |
 | CLI | `run`、`resume`、`plan`、`tools`、`history`、`errors`、`schedule`、`checkpoints` |
 
@@ -58,6 +60,7 @@
 | 生命周期治理 | 显式前置检查 + 独立 hooks 示例 | 运行时 hooks / middleware / policy engine |
 | 表格 | CSV 标准库，Excel 可选 openpyxl | 数据仓库、BI、ETL 管道 |
 | 重试 | 指数退避 + jitter | Prefect/Celery/Temporal task retry |
+| 压力治理 | 独立限流/熔断示例 | API 网关、队列、熔断器、弹性 worker |
 | 调度 | 本地简化 daily/weekly | APScheduler/Celery Beat/Prefect/Temporal |
 | 审计 | JSONL 本地日志 | OpenTelemetry、LangSmith、SIEM |
 
@@ -105,7 +108,8 @@ flowchart TD
 | 21.4 | 报表生成 | `reports/report_generator.py` | 能生成 CSV 日报 |
 | 21.5 | 调度器 | `scheduler/task_scheduler.py` | 可注册/list/remove 本地任务 |
 | 21.6 | CLI | `main.py` | 支持运行、计划预览、恢复、历史、错误、调度 |
-| 21.7 | 测试 | `tests/test_workflow.py`、`tests/test_hook_lifecycle_example.py` | 覆盖路径安全、CSV 统计、审批恢复、hooks 生命周期 |
+| 21.7 | 压力治理示例 | `examples/agent_pressure_governance_demo.py` | 演示滑动窗口限流和熔断器 |
+| 21.8 | 测试 | `tests/test_workflow.py`、`tests/test_hook_lifecycle_example.py`、`tests/test_agent_pressure_governance_example.py` | 覆盖路径安全、CSV 统计、审批恢复、hooks 生命周期、压力治理 |
 
 ## 7. 验收标准
 
@@ -129,6 +133,7 @@ flowchart TD
 | 烟测 | 日报流程可在无 LLM 环境通过 |
 | 审计 | 每个工具调用都有日志记录 |
 | 恢复 | 审批恢复不会重复执行已成功步骤 |
+| 压测指标 | 能定义任务成功率、P95/P99、重试率、限流命中率、审批积压 |
 
 ## 8. 风险与应对
 
@@ -138,6 +143,8 @@ flowchart TD
 | 敏感工具误执行 | 删除文件或误发通知 | 默认等待审批，审批后执行 |
 | 路径穿越 | 读写非项目文件 | `resolve_safe_path` 限制目录 |
 | 非幂等工具重试 | 重复通知或重复归档 | ToolMeta 标记 `idempotent=False` |
+| 重试风暴 | 上游故障被大量并发重试放大 | 指数退避、jitter、重试预算、熔断 |
+| 工具调用过载 | 单个工具被多任务集中打爆 | 按工具/用户/租户限流和排队 |
 | 本地调度丢失 | 进程重启后任务消失 | 计划书标注教学限制，生产用持久化调度器 |
 
 ## 9. 后续生产化路线
@@ -146,11 +153,12 @@ flowchart TD
 2. 引入真实审批流和 Web 控制台。
 3. 接入 OpenTelemetry/LangSmith 做 trace 和指标。
 4. 把工具执行下沉到任务队列或 worker。
-5. 增加数据库型 schedule store 和分布式锁。
-6. 为每个工具增加 Pydantic schema 和单元测试。
-7. 将高复用工具封装为 MCP Server，但继续由 ToolRegistry 负责权限、审批、限流和审计。
-8. 将执行前校验、审批、审计、限流和错误处理抽象为可配置 hooks / middleware。
-9. 评估 Google ADK、PydanticAI、OpenAI Agents SDK 等框架在结构化输出、观测和部署上的收益。
+5. 增加限流、队列、熔断、重试预算和容量压测基线。
+6. 增加数据库型 schedule store 和分布式锁。
+7. 为每个工具增加 Pydantic schema 和单元测试。
+8. 将高复用工具封装为 MCP Server，但继续由 ToolRegistry 负责权限、审批、限流和审计。
+9. 将执行前校验、审批、审计、限流和错误处理抽象为可配置 hooks / middleware。
+10. 评估 Google ADK、PydanticAI、OpenAI Agents SDK 等框架在结构化输出、观测和部署上的收益。
 
 ## 10. 当前技术判断
 
@@ -159,4 +167,5 @@ flowchart TD
 - 当前生产工作流生态更强调 durable execution、task-level retries、trace 和 guardrails。
 - MCP 正在成为 Agent 连接外部工具和上下文的重要标准，但不能替代本项目的工具治理层。
 - Hooks 是工具治理从“散落的 if 判断”走向“统一生命周期拦截”的关键抽象，但 hook 自身也必须受信任、限时和审计。
+- 流程 Agent 的生产压力主要来自工具调用放大、重试风暴和审批积压，必须用限流、队列、熔断和压测指标管理。
 - 新 Agent 框架的核心价值不是“更自动”，而是让 schema、trace、eval、sandbox 和 deployment 更工程化。

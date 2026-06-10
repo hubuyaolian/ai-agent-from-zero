@@ -31,3 +31,4 @@ chroma_db/
 # ===== 毕业项目运行时产物 =====
 project_07_enterprise_rag/runtime_data/
 project_08_workflow_agent/data/output/
+project_11_agent_service_ops/runtime_data/
