@@ -11,8 +11,17 @@ Day 12 演示：基于动态重新规划 (Dynamic Replanning) 的高级自适应
 
 # 导入 JSON 序列化库，用于解析大模型的规划和重规划数据
 import json
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入 TypedDict 与 List 结构
 from typing import TypedDict, List
+
+# 将项目根目录加入模块搜索路径，保证 `python project_05_advanced/05_dynamic_replanning.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 消息类
 from langchain_core.messages import HumanMessage
 # 导入 LangGraph 状态图机核心类
