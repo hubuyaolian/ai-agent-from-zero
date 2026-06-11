@@ -14,8 +14,17 @@ Day 13 演示：基于 LangGraph interrupt_before 实现的人工介入审批流
 import json
 # 导入操作系统相关库，用于物理写入和清理测试文件
 import os
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入 TypedDict 类型，用于定义图状态
 from typing import TypedDict
+
+# 将项目根目录加入模块搜索路径，保证 `python project_05_advanced/07_human_in_the_loop.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 消息类，用于与大模型交互
 from langchain_core.messages import HumanMessage
 # 导入 LangGraph 状态图核心类

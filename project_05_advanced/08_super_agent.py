@@ -16,8 +16,17 @@ Day 13 演示：综合高级 Super Agent (集大成者) 🦸
 import json
 # 导入操作系统相关库，用于敏感动作写物理磁盘与后续文件删除清理
 import os
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入 TypedDict 结构，定义图的全局共享状态
 from typing import TypedDict, List, Dict
+
+# 将项目根目录加入模块搜索路径，保证 `python project_05_advanced/08_super_agent.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 的消息对象，用于多节点 LLM 对话
 from langchain_core.messages import HumanMessage
 # 导入 LangGraph 核心图组件与状态终点 END
