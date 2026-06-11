@@ -11,8 +11,17 @@ Day 14 演示：多 Agent 状态管理与数据通信 (State Sharing & Communica
 输出返回值：控制台流式展示乐观观点、悲观驳回以及裁判最终高含金量中立评估的报告文本。
 """
 
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入 TypedDict 结构，定义图的共享状态
 from typing import TypedDict
+
+# 将项目根目录加入模块搜索路径，保证 `python project_06_multi_agent/02_agent_communication.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 的消息消息类
 from langchain_core.messages import HumanMessage
 # 导入 LangGraph 状态图类及终点 END
