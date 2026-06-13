@@ -11,6 +11,10 @@ Day 16 模块：AI 调研团队 — 写作专家 (Writer Agent) ✍️
 输出返回值：整合完美的 Markdown 格式专栏级研究报告文本。
 """
 
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入加载环境变量的工具
 from dotenv import load_dotenv
 # 导入 LangChain 底层消息模型
@@ -18,6 +22,10 @@ from langchain_core.messages import SystemMessage, HumanMessage
 # 导入大模型底层基类
 from langchain_core.language_models.chat_models import BaseChatModel
 
+# 将项目根目录加入模块搜索路径，保证 `python project_06_multi_agent/05_research_team/main.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 从公共模型工厂导入实例化工具
 from common.model_factory import create_model
 
