@@ -11,8 +11,17 @@ Day 15 演示：多 Agent 协作架构 — 线性协作流水线模式 (Collabor
 输出返回值：控制台打印每一个执行节点的局部输入输出、接力痕迹以及最终出炉的高含金量分析报告。
 """
 
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入 TypedDict 结构，定义流水线图共享状态结构
 from typing import TypedDict
+
+# 将项目根目录加入模块搜索路径，保证 `python project_06_multi_agent/04_collaborative_agents.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 基础用户消息模型
 from langchain_core.messages import HumanMessage
 # 导入 LangGraph 状态图定义及终点 END
