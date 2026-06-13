@@ -16,9 +16,17 @@ Day 17 进阶模块：AI 调研团队 — 审核反馈环工作流定义 (Workfl
 import operator
 # 导入 JSON 数据解析库
 import json
+# 导入系统路径模块，用于支持从任意位置直接运行本脚本
+import sys
+# 导入路径处理工具，用于定位项目根目录
+from pathlib import Path
 # 导入计时与状态累积相关的基类和类库
 from typing import TypedDict, Annotated, Sequence
 
+# 将项目根目录加入模块搜索路径，保证 `python project_06_multi_agent/05_research_team/workflow_v2.py` 可直接运行
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 # 导入 LangChain 的消息基类与 AI 消息模型
 from langchain_core.messages import BaseMessage, AIMessage, SystemMessage, HumanMessage
 # 导入 LangGraph 状态图与终点 END
