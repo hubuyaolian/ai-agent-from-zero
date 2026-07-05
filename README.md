@@ -4,12 +4,20 @@
 
 ## 项目简介
 
-本仓库是一个 **AI Agent 渐进式教学课程代码库**，共 11 个项目 / 27 天，从最底层的 HTTP API 请求开始，逐步过渡到 LangChain、LangGraph、RAG、多 Agent、企业治理、压测、框架选型和服务化运维。
+本仓库是一个 **AI Agent 渐进式教学课程代码库**，当前已覆盖 11 个项目 / 27 天内容。从最底层的 HTTP API 请求开始，逐步过渡到 LangChain、LangGraph、RAG、多 Agent、企业治理、压测、框架选型和 FastAPI 服务化运维。
 
 课程分为两段：
 
 - `project_01` 到 `project_06`：基础能力训练，每个文件基本都可独立运行，适合按 Day 顺序学习。
 - `project_07` 到 `project_11`：企业级综合项目，按职责分包，重点训练架构设计、治理、安全、评估、选型判断和生产运维。
+
+当前代码库已经补齐：
+
+- 企业级 RAG：混合检索、RRF、ACL、审计、质量评估、吞吐量估算和 Agentic RAG 控制示例。
+- 工作流 Agent：工具注册、权限策略、计划校验、checkpoint、hooks、重试降级、调度和压力治理示例。
+- 多智能体开发团队：消息总线、角色分工、结构化产物生成、静态检查、测试执行和安全交付。
+- 框架选型课：用能力标签比较 LangGraph、OpenAI Agents SDK、Google ADK、PydanticAI、AutoGen、CrewAI、LlamaIndex Agents、Semantic Kernel 等框架。
+- 服务运维课：FastAPI API、SSE 协议演示、API Key 鉴权、令牌桶限流、模型网关、预算、trace、metrics、smoke eval 和 Docker 部署边界。
 
 ## 技术栈
 
@@ -123,7 +131,8 @@ agent/
 ├── requirements.txt                # Python 依赖
 ├── .env.example                    # 环境变量模板
 ├── LEARNING_PLAN.md                # 完整学习计划
-└── walkthrough.md                  # 前 3 天详细 Walkthrough
+├── LEARNING_PROGRESS.md            # 学习进度记录
+└── LEARNING_SKILLS.md              # 学习技能与方法总结
 ```
 
 ## 快速开始
@@ -137,7 +146,7 @@ cd agent
 conda create -n agent_env python=3.10
 conda activate agent_env
 
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### 2. 配置 API Key
@@ -186,6 +195,13 @@ python project_10_agent_frameworks/01_framework_comparison.py
 
 # Day 26-27：Agent 生产化服务
 python project_11_agent_service_ops/main.py
+```
+
+如果使用本机课程环境，也可以统一写成：
+
+```bash
+conda run -n agent_env python project_10_agent_frameworks/01_framework_comparison.py
+conda run -n agent_env python -m unittest discover project_11_agent_service_ops/tests -v
 ```
 
 ### 4. 运行回归测试
@@ -255,7 +271,6 @@ app = workflow.compile()
 | [LEARNING_PLAN.md](LEARNING_PLAN.md) | 完整学习计划大纲（11 个项目 / 27 天） |
 | [LEARNING_PROGRESS.md](LEARNING_PROGRESS.md) | 学习进度记录 |
 | [LEARNING_SKILLS.md](LEARNING_SKILLS.md) | 学习技能与方法总结 |
-| [walkthrough.md](walkthrough.md) | 前 3 天详细 Walkthrough |
 | `project_XX/DAYXX.md` | 每日学习笔记 |
 | `project_07_enterprise_rag/PROJECT_PLAN.md` | 企业级 RAG 项目计划和验收标准 |
 | `project_08_workflow_agent/PROJECT_PLAN.md` | 工作流 Agent 项目计划和验收标准 |

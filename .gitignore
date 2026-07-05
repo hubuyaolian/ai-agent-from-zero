@@ -20,6 +20,17 @@ env/
 *.swp
 *.swo
 
+# ===== 本机 AI 助手和个人工具配置 =====
+.agent/
+.agents/
+.codex/
+.claude/
+.qoder/
+.codeartsdoer/
+.arts/
+CLAUDE.md
+GEMINI.md
+
 # ===== 系统文件 =====
 .DS_Store
 Thumbs.db
@@ -31,6 +42,7 @@ chroma_db/
 project_04_memory_rag/memories.db
 
 # ===== 毕业项目运行时产物 =====
+project_06_multi_agent/05_research_team/output/
 project_07_enterprise_rag/runtime_data/
 project_08_workflow_agent/data/output/
 project_11_agent_service_ops/runtime_data/

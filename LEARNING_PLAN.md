@@ -381,14 +381,15 @@ project_08_workflow_agent/
 ├── tools/
 │   ├── registry.py              # ToolRegistry 统一注册中心
 │   ├── file_tools.py            # 文件处理（读/写/归档/清理）
-│   ├── excel_tools.py           # Excel 读写（openpyxl）
-│   ├── data_tools.py            # 数据清洗/统计/转换
-│   ├── text_tools.py            # 文本提取/格式化
-│   ├── notify_tools.py          # 消息推送（模拟企业微信/邮件）
-│   └── schedule_tools.py        # 定时任务注册/查询
+│   ├── data_tools.py            # CSV 数据清洗/统计/转换
+│   └── notify_tools.py          # 消息推送（模拟企业微信/邮件）
 ├── planner/
+│   ├── models.py                # Step / ExecutionPlan
+│   ├── plan_validator.py        # 计划校验与拓扑排序
 │   └── task_planner.py          # TaskPlanner 任务拆解
-└── requirements.txt
+├── scheduler/
+│   └── task_scheduler.py        # 定时/触发调度器
+└── main.py                      # CLI 入口
 ```
 
 **核心能力**：
@@ -450,7 +451,8 @@ project_09_dev_team/
 │   └── docwriter.py             # 文档Agent（注释、API 文档、README）
 ├── messages/
 │   ├── __init__.py
-│   └── message_bus.py           # Agent 间消息总线
+│   ├── bus.py                   # Agent 间消息总线
+│   └── models.py                # 消息和任务结果模型
 ├── graph/
 │   ├── __init__.py
 │   └── state.py                 # DevTeamState 定义
@@ -614,7 +616,8 @@ project_11_agent_service_ops/
 ├── .flake8                       # Flake8 代码格式校验配置文件
 ├── requirements.txt              # 统一项目依赖包声明文件
 ├── LEARNING_PLAN.md              # 课程学习计划大纲文档（当前文档）
-├── walkthrough.md                # 评审修复与进度指引文档
+├── LEARNING_PROGRESS.md          # 学习进度记录文档
+├── LEARNING_SKILLS.md            # 学习技能与方法总结文档
 ├── common/                       # 公共模块目录（跨项目复用）
 │   ├── __init__.py               # 模块初始化
 │   ├── model_factory.py          # 公共模型工厂（统一大模型创建接口）
